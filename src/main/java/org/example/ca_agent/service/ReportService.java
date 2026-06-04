@@ -2,16 +2,19 @@ package org.example.ca_agent.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import org.example.ca_agent.common.BizException;
 import org.example.ca_agent.common.JsonUtils;
 import org.example.ca_agent.dto.agent.ReportDraftDTO;
 import org.example.ca_agent.dto.agent.ReviewResultDTO;
 import org.example.ca_agent.dto.response.ReportResponse;
+import org.example.ca_agent.entity.AnalysisTaskEntity;
 import org.example.ca_agent.entity.ReportEntity;
 import org.example.ca_agent.entity.ReviewIssueEntity;
 import org.example.ca_agent.enums.AgentType;
 import org.example.ca_agent.enums.ReviewIssueType;
 import org.example.ca_agent.repository.ReportRepository;
 import org.example.ca_agent.repository.ReviewIssueRepository;
+import org.example.ca_agent.repository.TaskRepository;
 import org.example.ca_agent.schema.Evidence;
 import org.springframework.stereotype.Service;
 
@@ -24,8 +27,10 @@ public class ReportService {
 
     private final ReportRepository reportRepository;
     private final ReviewIssueRepository reviewIssueRepository;
+    private final TaskRepository taskRepository;
 
     public ReportResponse getReport(String taskId) {
+        ensureTaskExists(taskId);
         ReportEntity reportEntity = reportRepository.selectOne(
                 new LambdaQueryWrapper<ReportEntity>().eq(ReportEntity::getTaskId, taskId));
 
@@ -44,6 +49,14 @@ public class ReportService {
 
         response.setReviewResult(toReviewResult(taskId, issueEntities));
         return response;
+    }
+
+    private void ensureTaskExists(String taskId) {
+        AnalysisTaskEntity entity = taskRepository.selectOne(
+                new LambdaQueryWrapper<AnalysisTaskEntity>().eq(AnalysisTaskEntity::getTaskId, taskId));
+        if (entity == null) {
+            throw new BizException(404, "Task not found: " + taskId);
+        }
     }
 
     private ReviewResultDTO toReviewResult(String taskId, List<ReviewIssueEntity> issueEntities) {

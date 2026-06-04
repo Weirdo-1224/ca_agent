@@ -10,7 +10,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -73,7 +72,9 @@ class AnalysisTaskControllerTest {
         mockMvc.perform(get("/api/tasks/{taskId}/evidence", taskId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data[0].usedFor").isArray())
+                .andExpect(jsonPath("$.data[0].usedFor[0]").value("official"));
 
         // 5. 验证评审接口
         mockMvc.perform(get("/api/tasks/{taskId}/review", taskId))
@@ -107,6 +108,24 @@ class AnalysisTaskControllerTest {
     @Test
     void returnsFailResultWhenTaskDoesNotExist() throws Exception {
         mockMvc.perform(get("/api/tasks/{taskId}", "task_missing"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value(404))
+                .andExpect(jsonPath("$.message").value("Task not found: task_missing"));
+
+        mockMvc.perform(get("/api/tasks/{taskId}/report", "task_missing"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value(404))
+                .andExpect(jsonPath("$.message").value("Task not found: task_missing"));
+
+        mockMvc.perform(get("/api/tasks/{taskId}/evidence", "task_missing"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value(404))
+                .andExpect(jsonPath("$.message").value("Task not found: task_missing"));
+
+        mockMvc.perform(get("/api/tasks/{taskId}/agent-runs", "task_missing"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value(404))

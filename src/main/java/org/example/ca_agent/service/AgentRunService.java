@@ -2,10 +2,13 @@ package org.example.ca_agent.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import org.example.ca_agent.common.BizException;
 import org.example.ca_agent.dto.response.AgentRunResponse;
 import org.example.ca_agent.entity.AgentRunEntity;
+import org.example.ca_agent.entity.AnalysisTaskEntity;
 import org.example.ca_agent.enums.AgentType;
 import org.example.ca_agent.repository.AgentRunRepository;
+import org.example.ca_agent.repository.TaskRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,14 +18,24 @@ import java.util.List;
 public class AgentRunService {
 
     private final AgentRunRepository agentRunRepository;
+    private final TaskRepository taskRepository;
 
     public List<AgentRunResponse> getAgentRuns(String taskId) {
+        ensureTaskExists(taskId);
         return agentRunRepository.selectList(
                         new LambdaQueryWrapper<AgentRunEntity>()
                                 .eq(AgentRunEntity::getTaskId, taskId))
                 .stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    private void ensureTaskExists(String taskId) {
+        AnalysisTaskEntity entity = taskRepository.selectOne(
+                new LambdaQueryWrapper<AnalysisTaskEntity>().eq(AnalysisTaskEntity::getTaskId, taskId));
+        if (entity == null) {
+            throw new BizException(404, "Task not found: " + taskId);
+        }
     }
 
     private AgentRunResponse toResponse(AgentRunEntity entity) {
