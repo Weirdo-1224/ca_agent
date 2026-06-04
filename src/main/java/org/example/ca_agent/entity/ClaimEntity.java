@@ -11,4 +11,13 @@ public class ClaimEntity {
 
     @TableId(type = IdType.AUTO)
     private Long id;
+
+    private String claimId;
+    private String taskId;
+    private String productName;
+    private String dimension;
+    private String statement;
+    private Double confidence;
+    private String evidenceIdsJson;
+    private String riskLevel;
 }
