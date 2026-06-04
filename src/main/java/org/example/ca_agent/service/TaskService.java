@@ -1,39 +1,39 @@
 package org.example.ca_agent.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.ca_agent.assembler.EntityAssembler;
+import org.example.ca_agent.assembler.StateAssembler;
 import org.example.ca_agent.common.BizException;
 import org.example.ca_agent.dto.agent.TaskInputDTO;
 import org.example.ca_agent.dto.request.TaskCreateRequest;
 import org.example.ca_agent.dto.response.TaskDetailResponse;
+import org.example.ca_agent.entity.AnalysisTaskEntity;
+import org.example.ca_agent.repository.TaskRepository;
 import org.example.ca_agent.workflow.CompetitiveAnalysisState;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 public class TaskService {
 
     private final WorkflowService workflowService;
-    private final Map<String, CompetitiveAnalysisState> taskStateStore = new ConcurrentHashMap<>();
-    private final Map<String, LocalDateTime> taskCreatedAtStore = new ConcurrentHashMap<>();
-    private final Map<String, LocalDateTime> taskUpdatedAtStore = new ConcurrentHashMap<>();
+    private final StateAssembler stateAssembler;
+    private final EntityAssembler entityAssembler;
+    private final TaskRepository taskRepository;
 
     public TaskDetailResponse createTask(TaskCreateRequest request) {
         LocalDateTime now = LocalDateTime.now();
         TaskInputDTO taskInput = toTaskInput(request);
         CompetitiveAnalysisState state = workflowService.run(taskInput);
-        taskStateStore.put(taskInput.getTaskId(), state);
-        taskCreatedAtStore.put(taskInput.getTaskId(), now);
-        taskUpdatedAtStore.put(taskInput.getTaskId(), LocalDateTime.now());
-        return toTaskDetailResponse(state);
+        stateAssembler.saveState(state);
+        return toTaskDetailResponse(state, now);
     }
 
     public CompetitiveAnalysisState getTaskState(String taskId) {
-        CompetitiveAnalysisState state = taskStateStore.get(taskId);
+        CompetitiveAnalysisState state = entityAssembler.loadState(taskId);
         if (state == null) {
             throw new BizException(404, "Task not found: " + taskId);
         }
@@ -41,7 +41,13 @@ public class TaskService {
     }
 
     public TaskDetailResponse getTaskDetail(String taskId) {
-        return toTaskDetailResponse(getTaskState(taskId));
+        AnalysisTaskEntity entity = taskRepository.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AnalysisTaskEntity>()
+                        .eq(AnalysisTaskEntity::getTaskId, taskId));
+        if (entity == null) {
+            throw new BizException(404, "Task not found: " + taskId);
+        }
+        return toTaskDetailResponse(entity);
     }
 
     private TaskInputDTO toTaskInput(TaskCreateRequest request) {
@@ -57,7 +63,7 @@ public class TaskService {
         return taskInput;
     }
 
-    private TaskDetailResponse toTaskDetailResponse(CompetitiveAnalysisState state) {
+    private TaskDetailResponse toTaskDetailResponse(CompetitiveAnalysisState state, LocalDateTime createdAt) {
         TaskInputDTO taskInput = state.getTaskInput();
         TaskDetailResponse response = new TaskDetailResponse();
         response.setTaskId(taskInput.getTaskId());
@@ -68,8 +74,37 @@ public class TaskService {
         response.setStatus(state.getStatus());
         response.setIterationCount(state.getIterationCount());
         response.setMaxIterations(taskInput.getMaxIterations());
-        response.setCreatedAt(taskCreatedAtStore.get(taskInput.getTaskId()));
-        response.setUpdatedAt(taskUpdatedAtStore.get(taskInput.getTaskId()));
+        response.setCreatedAt(createdAt);
+        response.setUpdatedAt(LocalDateTime.now());
         return response;
+    }
+
+    private TaskDetailResponse toTaskDetailResponse(AnalysisTaskEntity entity) {
+        TaskDetailResponse response = new TaskDetailResponse();
+        response.setTaskId(entity.getTaskId());
+        response.setTaskName(entity.getTaskName());
+        response.setDomain(entity.getDomain());
+        response.setTargetProducts(parseJsonList(entity.getTargetProductsJson()));
+        response.setAnalysisGoal(entity.getAnalysisGoal());
+        try {
+            response.setStatus(org.example.ca_agent.enums.TaskStatus.valueOf(entity.getStatus()));
+        } catch (Exception e) {
+            response.setStatus(null);
+        }
+        response.setIterationCount(entity.getIterationCount());
+        response.setMaxIterations(entity.getMaxIterations());
+        response.setCreatedAt(entity.getCreatedAt());
+        response.setUpdatedAt(entity.getUpdatedAt());
+        return response;
+    }
+
+    @SuppressWarnings("unchecked")
+    private java.util.List<String> parseJsonList(String json) {
+        if (json == null || json.isBlank()) return java.util.Collections.emptyList();
+        try {
+            return org.example.ca_agent.common.JsonUtils.fromJson(json, java.util.List.class);
+        } catch (Exception e) {
+            return java.util.Collections.emptyList();
+        }
     }
 }

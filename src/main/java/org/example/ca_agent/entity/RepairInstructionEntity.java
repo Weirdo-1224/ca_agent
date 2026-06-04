@@ -8,20 +8,22 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("review_issue")
-public class ReviewIssueEntity {
+@TableName("repair_instruction")
+public class RepairInstructionEntity {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private String issueId;
+    private String instructionId;
     private String taskId;
-    private String severity;
-    private String type;
-    private String description;
+    private String repairId;
+    private String fromAgent;
     private String targetAgent;
+    private String issueIdsJson;
+    private String repairType;
     private String targetProduct;
     private String targetDimension;
-    private String repairInstruction;
+    private String instruction;
+    private String priority;
     private LocalDateTime createdAt;
 }
