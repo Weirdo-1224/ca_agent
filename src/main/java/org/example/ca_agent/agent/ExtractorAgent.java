@@ -1,10 +1,79 @@
 package org.example.ca_agent.agent;
 
 import lombok.RequiredArgsConstructor;
+import org.example.ca_agent.dto.agent.ProductProfileSetDTO;
+import org.example.ca_agent.enums.AgentType;
+import org.example.ca_agent.enums.TaskStatus;
+import org.example.ca_agent.schema.Claim;
+import org.example.ca_agent.schema.Evidence;
+import org.example.ca_agent.mock.MockCompetitiveAnalysisFixtures;
+import org.example.ca_agent.workflow.CompetitiveAnalysisState;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class ExtractorAgent {
+public class ExtractorAgent implements AgentNode {
+
+    @Override
+    public AgentType getAgentType() {
+        return AgentType.EXTRACTOR_AGENT;
+    }
+
+    @Override
+    public CompetitiveAnalysisState execute(CompetitiveAnalysisState state) {
+        state.setStatus(TaskStatus.EXTRACTING);
+
+        ProductProfileSetDTO profileSet = new ProductProfileSetDTO();
+        profileSet.setTaskId(state.getRawSourceSet().getTaskId());
+        profileSet.setProducts(state.getRawSourceSet().getEvidencePool().stream()
+                .map(Evidence::getProductName)
+                .distinct()
+                .map(productName -> buildProductProfile(productName, evidenceIdsForProduct(state, productName)))
+                .toList());
+        state.setProductProfileSet(profileSet);
+        return state;
+    }
+
+    private ProductProfileSetDTO.ProductProfile buildProductProfile(String productName, List<String> evidenceIds) {
+        ProductProfileSetDTO.ProductProfile profile = new ProductProfileSetDTO.ProductProfile();
+        profile.setProductName(productName);
+        profile.setCompany(productName + " Company");
+        profile.setOfficialUrl("https://example.com/" + productName.toLowerCase().replaceAll("[^a-z0-9]+", "_"));
+        profile.setProductType("AI_CODING_TOOL");
+        profile.setPositioning(MockCompetitiveAnalysisFixtures.positioning(productName, evidenceIds));
+        profile.setTargetUsers(List.of(MockCompetitiveAnalysisFixtures.targetUser(evidenceIds)));
+        profile.setCoreCapabilities(MockCompetitiveAnalysisFixtures.coreCapabilities(evidenceIds));
+        profile.setAgentCapabilities(MockCompetitiveAnalysisFixtures.agentCapabilities(evidenceIds));
+        profile.setCodebaseUnderstanding(MockCompetitiveAnalysisFixtures.codebaseUnderstanding(evidenceIds));
+        profile.setIdeEcosystem(MockCompetitiveAnalysisFixtures.ideEcosystem(evidenceIds));
+        profile.setModelContext(MockCompetitiveAnalysisFixtures.modelContext(evidenceIds));
+        profile.setPricing(MockCompetitiveAnalysisFixtures.pricing(evidenceIds));
+        profile.setEnterpriseFeatures(MockCompetitiveAnalysisFixtures.enterpriseFeatures(evidenceIds));
+        profile.setUserFeedback(MockCompetitiveAnalysisFixtures.userFeedback(evidenceIds));
+        profile.setClaims(List.of(claim(productName, evidenceIds)));
+        profile.setMissingFields(List.of(MockCompetitiveAnalysisFixtures.missingField("modelContext.contextWindow")));
+        return profile;
+    }
+
+    private List<String> evidenceIdsForProduct(CompetitiveAnalysisState state, String productName) {
+        return state.getRawSourceSet().getEvidencePool().stream()
+                .filter(evidence -> productName.equals(evidence.getProductName()))
+                .map(Evidence::getEvidenceId)
+                .toList();
+    }
+
+    private Claim claim(String productName, List<String> evidenceIds) {
+        Claim claim = new Claim();
+        claim.setClaimId("claim_" + productName.toLowerCase().replaceAll("[^a-z0-9]+", "_") + "_001");
+        claim.setProductName(productName);
+        claim.setDimension("positioning");
+        claim.setStatement(productName + " has mock evidence-backed AI coding assistant capabilities.");
+        claim.setConfidence(0.8);
+        claim.setEvidenceIds(evidenceIds);
+        claim.setRiskLevel("low");
+        return claim;
+    }
 
 }
