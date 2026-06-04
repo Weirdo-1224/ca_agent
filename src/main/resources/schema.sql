@@ -16,7 +16,7 @@ CREATE INDEX IF NOT EXISTS idx_analysis_task_task_id ON analysis_task(task_id);
 
 CREATE TABLE IF NOT EXISTS evidence (
     id               BIGSERIAL PRIMARY KEY,
-    evidence_id      VARCHAR(64)  NOT NULL UNIQUE,
+    evidence_id      VARCHAR(64)  NOT NULL,
     task_id          VARCHAR(64)  NOT NULL,
     product_name     VARCHAR(128) NOT NULL,
     source_type      VARCHAR(32),
@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS evidence (
     collected_at     TIMESTAMP,
     reliability      VARCHAR(16),
     used_for_json    TEXT,
-    created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_evidence_task_evidence UNIQUE (task_id, evidence_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_evidence_task_id ON evidence(task_id);
@@ -34,7 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_evidence_product_name ON evidence(product_name);
 
 CREATE TABLE IF NOT EXISTS claim (
     id              BIGSERIAL PRIMARY KEY,
-    claim_id        VARCHAR(64)  NOT NULL UNIQUE,
+    claim_id        VARCHAR(64)  NOT NULL,
     task_id         VARCHAR(64)  NOT NULL,
     product_name    VARCHAR(128) NOT NULL,
     dimension       VARCHAR(64),
@@ -42,7 +43,8 @@ CREATE TABLE IF NOT EXISTS claim (
     confidence      NUMERIC(3,2),
     evidence_ids_json TEXT,
     risk_level      VARCHAR(16),
-    created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_claim_task_claim UNIQUE (task_id, claim_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_claim_task_id ON claim(task_id);
@@ -63,7 +65,7 @@ CREATE INDEX IF NOT EXISTS idx_report_task_id ON report(task_id);
 
 CREATE TABLE IF NOT EXISTS review_issue (
     id                 BIGSERIAL PRIMARY KEY,
-    issue_id           VARCHAR(64)  NOT NULL UNIQUE,
+    issue_id           VARCHAR(64)  NOT NULL,
     task_id            VARCHAR(64)  NOT NULL,
     severity           VARCHAR(16),
     type               VARCHAR(64),
@@ -72,7 +74,8 @@ CREATE TABLE IF NOT EXISTS review_issue (
     target_product     VARCHAR(128),
     target_dimension   VARCHAR(64),
     repair_instruction TEXT,
-    created_at         TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at         TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_review_issue_task_issue UNIQUE (task_id, issue_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_review_issue_task_id ON review_issue(task_id);

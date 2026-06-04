@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -26,24 +27,24 @@ class AnalysisTaskControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    private static final String DEFAULT_REQUEST_BODY = """
+            {
+              "taskName": "AI 编程工具竞品分析",
+              "domain": "AI_CODING_TOOLS",
+              "targetProducts": ["Cursor", "Windsurf", "GitHub Copilot", "通义灵码"],
+              "analysisGoal": "生成面向产品团队的 AI 编程工具竞品分析报告",
+              "outputFormat": "markdown",
+              "language": "zh-CN",
+              "maxIterations": 2
+            }
+            """;
+
     @Test
     void fullWorkflow_createsTaskAndExposesDetailReportEvidenceAndReview() throws Exception {
-        String requestBody = """
-                {
-                  "taskName": "AI 编程工具竞品分析",
-                  "domain": "AI_CODING_TOOLS",
-                  "targetProducts": ["Cursor", "Windsurf", "GitHub Copilot", "通义灵码"],
-                  "analysisGoal": "生成面向产品团队的 AI 编程工具竞品分析报告",
-                  "outputFormat": "markdown",
-                  "language": "zh-CN",
-                  "maxIterations": 2
-                }
-                """;
-
         // 1. 创建任务并获取 taskId
         String response = mockMvc.perform(post("/api/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody))
+                        .content(DEFAULT_REQUEST_BODY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.taskId").isNotEmpty())
@@ -83,11 +84,37 @@ class AnalysisTaskControllerTest {
     }
 
     @Test
+    void createTask_allowsMultipleTasksWithSameMockBusinessIds() throws Exception {
+        String firstTaskId = createTaskAndReturnId();
+
+        mockMvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(DEFAULT_REQUEST_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.taskId").isNotEmpty())
+                .andExpect(jsonPath("$.data.taskId").value(not(firstTaskId)));
+    }
+
+    @Test
     void returnsFailResultWhenTaskDoesNotExist() throws Exception {
         mockMvc.perform(get("/api/tasks/{taskId}", "task_missing"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value(404))
                 .andExpect(jsonPath("$.message").value("Task not found: task_missing"));
+    }
+
+    private String createTaskAndReturnId() throws Exception {
+        String response = mockMvc.perform(post("/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(DEFAULT_REQUEST_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return response.replaceAll("(?s).*\"taskId\"\\s*:\\s*\"([^\"]+)\".*", "$1");
     }
 }
