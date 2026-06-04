@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @TableName("claim")
 public class ClaimEntity {
@@ -20,4 +22,5 @@ public class ClaimEntity {
     private Double confidence;
     private String evidenceIdsJson;
     private String riskLevel;
+    private LocalDateTime createdAt;
 }

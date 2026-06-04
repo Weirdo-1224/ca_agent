@@ -24,4 +24,5 @@ public class EvidenceEntity {
     private LocalDateTime collectedAt;
     private String reliability;
     private String usedForJson;
+    private LocalDateTime createdAt;
 }

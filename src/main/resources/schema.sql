@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS analysis_task (
     task_id         VARCHAR(64)  NOT NULL UNIQUE,
     task_name       VARCHAR(255) NOT NULL,
     domain          VARCHAR(64),
-    target_products_json JSONB,
+    target_products_json TEXT,
     analysis_goal   TEXT,
     status          VARCHAR(32)  NOT NULL,
     iteration_count INTEGER      DEFAULT 0,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS evidence (
     content_snippet  TEXT,
     collected_at     TIMESTAMP,
     reliability      VARCHAR(16),
-    used_for_json    JSONB,
+    used_for_json    TEXT,
     created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS claim (
     dimension       VARCHAR(64),
     statement       TEXT,
     confidence      NUMERIC(3,2),
-    evidence_ids_json JSONB,
+    evidence_ids_json TEXT,
     risk_level      VARCHAR(16),
     created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -53,8 +53,8 @@ CREATE TABLE IF NOT EXISTS report (
     task_id         VARCHAR(64)  NOT NULL UNIQUE,
     report_title    VARCHAR(512),
     report_format   VARCHAR(16),
-    sections_json   JSONB,
-    source_list_json JSONB,
+    sections_json   TEXT,
+    source_list_json TEXT,
     created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS repair_instruction (
     repair_id        VARCHAR(64),
     from_agent       VARCHAR(32),
     target_agent     VARCHAR(32),
-    issue_ids_json   JSONB,
+    issue_ids_json   TEXT,
     repair_type      VARCHAR(32),
     target_product   VARCHAR(128),
     target_dimension VARCHAR(64),
