@@ -1,5 +1,6 @@
 package org.example.ca_agent.assembler;
 
+import org.example.ca_agent.dto.agent.AgentRunTrace;
 import org.example.ca_agent.dto.agent.*;
 import org.example.ca_agent.entity.*;
 import org.example.ca_agent.enums.*;
@@ -280,6 +281,60 @@ class StateAssemblerTest {
         verify(repairInstructionRepository, never()).insert(any(RepairInstructionEntity.class));
     }
 
+    // ---------- AgentRun Trace ----------
+
+    @Test
+    void saveState_persistsAgentRunTraces() {
+        AgentRunTrace trace1 = buildTrace("run-1", AgentType.PLANNER_AGENT, "SUCCESS");
+        AgentRunTrace trace2 = buildTrace("run-2", AgentType.COLLECTOR_AGENT, "SUCCESS");
+        state.getAgentRuns().add(trace1);
+        state.getAgentRuns().add(trace2);
+
+        stateAssembler.saveState(state);
+
+        ArgumentCaptor<AgentRunEntity> captor = ArgumentCaptor.forClass(AgentRunEntity.class);
+        verify(agentRunRepository, times(2)).insert(captor.capture());
+
+        List<AgentRunEntity> saved = captor.getAllValues();
+        assertEquals("run-1", saved.get(0).getRunId());
+        assertEquals("PLANNER_AGENT", saved.get(0).getAgentType());
+        assertEquals("SUCCESS", saved.get(0).getStatus());
+        assertEquals("run-2", saved.get(1).getRunId());
+        assertEquals("COLLECTOR_AGENT", saved.get(1).getAgentType());
+    }
+
+    @Test
+    void saveState_skipsEmptyAgentRuns() {
+        stateAssembler.saveState(state);
+        verify(agentRunRepository, never()).insert(any(AgentRunEntity.class));
+    }
+
+    @Test
+    void saveState_clearsOldAgentRunsBeforeInsertingNew() {
+        state.getAgentRuns().add(buildTrace("run-1", AgentType.PLANNER_AGENT, "SUCCESS"));
+
+        stateAssembler.saveState(state);
+
+        InOrder inOrder = inOrder(agentRunRepository);
+        inOrder.verify(agentRunRepository).delete(any());
+        inOrder.verify(agentRunRepository).insert(any(AgentRunEntity.class));
+    }
+
+    @Test
+    void saveState_persistsFailedAgentRunWithErrorMessage() {
+        AgentRunTrace trace = buildTrace("run-err", AgentType.REVIEWER_AGENT, "FAILED");
+        trace.setErrorMessage("质检异常");
+        state.getAgentRuns().add(trace);
+
+        stateAssembler.saveState(state);
+
+        ArgumentCaptor<AgentRunEntity> captor = ArgumentCaptor.forClass(AgentRunEntity.class);
+        verify(agentRunRepository).insert(captor.capture());
+
+        assertEquals("FAILED", captor.getValue().getStatus());
+        assertEquals("质检异常", captor.getValue().getErrorMessage());
+    }
+
     // ---------- 辅助方法 ----------
 
     private CompetitiveAnalysisState buildMinimalState() {
@@ -333,5 +388,19 @@ class StateAssemblerTest {
         c.setEvidenceIds(Collections.emptyList());
         c.setRiskLevel("low");
         return c;
+    }
+
+    private AgentRunTrace buildTrace(String runId, AgentType agentType, String status) {
+        AgentRunTrace trace = new AgentRunTrace();
+        trace.setRunId(runId);
+        trace.setTaskId("task-001");
+        trace.setAgentType(agentType);
+        trace.setInputType("TestInput");
+        trace.setOutputType("TestOutput");
+        trace.setStatus(status);
+        trace.setStartTime(LocalDateTime.now());
+        trace.setEndTime(LocalDateTime.now());
+        trace.setDurationMs(100L);
+        return trace;
     }
 }

@@ -1,5 +1,6 @@
 package org.example.ca_agent.workflow;
 
+import org.example.ca_agent.agent.AgentRunTracer;
 import org.example.ca_agent.agent.AnalyzerAgent;
 import org.example.ca_agent.agent.CollectorAgent;
 import org.example.ca_agent.agent.ExtractorAgent;
@@ -28,7 +29,8 @@ class CompetitiveAnalysisGraphTest {
                 new WriterAgent(),
                 new ReviewerAgent(),
                 new WorkflowRouter(new RepairRouter()),
-                new RepairRouter()
+                new RepairRouter(),
+                new AgentRunTracer()
         );
 
         CompetitiveAnalysisState state = graph.runMockDemo();
@@ -55,7 +57,8 @@ class CompetitiveAnalysisGraphTest {
                 new WriterAgent(),
                 new ReviewerAgent(),
                 new WorkflowRouter(new RepairRouter()),
-                new RepairRouter()
+                new RepairRouter(),
+                new AgentRunTracer()
         );
 
         CompetitiveAnalysisState state = graph.runMockDemo();

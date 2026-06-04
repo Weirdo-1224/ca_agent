@@ -1,6 +1,7 @@
 package org.example.ca_agent.workflow;
 
 import lombok.Data;
+import org.example.ca_agent.dto.agent.AgentRunTrace;
 import org.example.ca_agent.dto.agent.CompetitiveAnalysisDTO;
 import org.example.ca_agent.dto.agent.ProductProfileSetDTO;
 import org.example.ca_agent.dto.agent.RawSourceSetDTO;
@@ -11,6 +12,7 @@ import org.example.ca_agent.dto.agent.TaskInputDTO;
 import org.example.ca_agent.dto.agent.TaskPlanDTO;
 import org.example.ca_agent.enums.TaskStatus;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -24,8 +26,16 @@ public class CompetitiveAnalysisState {
     private ReportDraftDTO reportDraft;
     private ReviewResultDTO reviewResult;
     private List<RepairInstructionDTO> repairInstructions;
+    private List<AgentRunTrace> agentRuns;
     private Integer iterationCount;
     private TaskStatus status;
+
+    public List<AgentRunTrace> getAgentRuns() {
+        if (this.agentRuns == null) {
+            this.agentRuns = new ArrayList<>();
+        }
+        return this.agentRuns;
+    }
 
     public void increaseIteration() {
         if (this.iterationCount == null) {

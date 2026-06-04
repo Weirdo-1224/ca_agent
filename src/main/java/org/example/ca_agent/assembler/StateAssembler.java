@@ -193,6 +193,22 @@ public class StateAssembler {
     }
 
     private void saveAgentRuns(CompetitiveAnalysisState state, LocalDateTime now) {
-        // TODO: Task 05 时补充 AgentRun 的 Trace 记录
+        if (state.getAgentRuns() == null || state.getAgentRuns().isEmpty()) {
+            return;
+        }
+        for (org.example.ca_agent.dto.agent.AgentRunTrace trace : state.getAgentRuns()) {
+            AgentRunEntity entity = new AgentRunEntity();
+            entity.setRunId(trace.getRunId());
+            entity.setTaskId(trace.getTaskId());
+            entity.setAgentType(trace.getAgentType() != null ? trace.getAgentType().name() : null);
+            entity.setInputType(trace.getInputType());
+            entity.setOutputType(trace.getOutputType());
+            entity.setStatus(trace.getStatus());
+            entity.setStartTime(trace.getStartTime());
+            entity.setEndTime(trace.getEndTime());
+            entity.setDurationMs(trace.getDurationMs());
+            entity.setErrorMessage(trace.getErrorMessage());
+            agentRunRepository.insert(entity);
+        }
     }
 }

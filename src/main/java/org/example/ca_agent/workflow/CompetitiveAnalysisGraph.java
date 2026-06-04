@@ -1,6 +1,7 @@
 package org.example.ca_agent.workflow;
 
 import lombok.RequiredArgsConstructor;
+import org.example.ca_agent.agent.AgentRunTracer;
 import org.example.ca_agent.agent.AnalyzerAgent;
 import org.example.ca_agent.agent.CollectorAgent;
 import org.example.ca_agent.agent.ExtractorAgent;
@@ -28,6 +29,7 @@ public class CompetitiveAnalysisGraph {
     private final ReviewerAgent reviewerAgent;
     private final WorkflowRouter workflowRouter;
     private final RepairRouter repairRouter;
+    private final AgentRunTracer agentRunTracer;
 
     public CompetitiveAnalysisState run(TaskInputDTO taskInput) {
         CompetitiveAnalysisState state = initState(taskInput);
@@ -65,12 +67,12 @@ public class CompetitiveAnalysisGraph {
     }
 
     private void executeFullChain(CompetitiveAnalysisState state) {
-        plannerAgent.execute(state);
-        collectorAgent.execute(state);
-        extractorAgent.execute(state);
-        analyzerAgent.execute(state);
-        writerAgent.execute(state);
-        reviewerAgent.execute(state);
+        agentRunTracer.trace(plannerAgent, state);
+        agentRunTracer.trace(collectorAgent, state);
+        agentRunTracer.trace(extractorAgent, state);
+        agentRunTracer.trace(analyzerAgent, state);
+        agentRunTracer.trace(writerAgent, state);
+        agentRunTracer.trace(reviewerAgent, state);
     }
 
     private void executeFrom(String route, CompetitiveAnalysisState state) {
@@ -84,22 +86,22 @@ public class CompetitiveAnalysisGraph {
     }
 
     private void executeFromCollector(CompetitiveAnalysisState state) {
-        collectorAgent.execute(state);
+        agentRunTracer.trace(collectorAgent, state);
         executeFromExtractor(state);
     }
 
     private void executeFromExtractor(CompetitiveAnalysisState state) {
-        extractorAgent.execute(state);
+        agentRunTracer.trace(extractorAgent, state);
         executeFromAnalyzer(state);
     }
 
     private void executeFromAnalyzer(CompetitiveAnalysisState state) {
-        analyzerAgent.execute(state);
+        agentRunTracer.trace(analyzerAgent, state);
         executeFromWriter(state);
     }
 
     private void executeFromWriter(CompetitiveAnalysisState state) {
-        writerAgent.execute(state);
-        reviewerAgent.execute(state);
+        agentRunTracer.trace(writerAgent, state);
+        agentRunTracer.trace(reviewerAgent, state);
     }
 }

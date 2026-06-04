@@ -7,6 +7,8 @@ import org.example.ca_agent.dto.request.TaskCreateRequest;
 import org.example.ca_agent.dto.response.ReportResponse;
 import org.example.ca_agent.dto.response.TaskDetailResponse;
 import org.example.ca_agent.schema.Evidence;
+import org.example.ca_agent.dto.response.AgentRunResponse;
+import org.example.ca_agent.service.AgentRunService;
 import org.example.ca_agent.service.EvidenceService;
 import org.example.ca_agent.service.ReportService;
 import org.example.ca_agent.service.TaskService;
@@ -27,6 +29,7 @@ public class AnalysisTaskController {
     private final TaskService taskService;
     private final ReportService reportService;
     private final EvidenceService evidenceService;
+    private final AgentRunService agentRunService;
 
     @PostMapping
     public Result<TaskDetailResponse> createTask(@RequestBody TaskCreateRequest request) {
@@ -51,5 +54,10 @@ public class AnalysisTaskController {
     @GetMapping("/{taskId}/review")
     public Result<ReviewResultDTO> getReview(@PathVariable String taskId) {
         return Result.success(taskService.getTaskState(taskId).getReviewResult());
+    }
+
+    @GetMapping("/{taskId}/agent-runs")
+    public Result<List<AgentRunResponse>> getAgentRuns(@PathVariable String taskId) {
+        return Result.success(agentRunService.getAgentRuns(taskId));
     }
 }

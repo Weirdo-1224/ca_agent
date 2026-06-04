@@ -81,6 +81,14 @@ class AnalysisTaskControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.taskId").value(taskId))
                 .andExpect(jsonPath("$.data.passed").value(true));
+
+        // 6. 验证 AgentRun Trace 接口（Task 05 新增）
+        // 第一轮 6 个 Agent + 回退到 Collector 后 5 个 Agent = 11 条 Trace
+        mockMvc.perform(get("/api/tasks/{taskId}/agent-runs", taskId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()").value(11));
     }
 
     @Test
