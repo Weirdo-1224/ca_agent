@@ -1,9 +1,9 @@
 package org.example.ca_agent.repository;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.example.ca_agent.entity.AgentRunEntity;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+import org.apache.ibatis.annotations.Mapper;
 
-@Repository
-public interface AgentRunRepository extends JpaRepository<AgentRunEntity, Long> {
+@Mapper
+public interface AgentRunRepository extends BaseMapper<AgentRunEntity> {
 }

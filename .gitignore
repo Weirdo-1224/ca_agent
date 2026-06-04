@@ -34,3 +34,7 @@ build/
 
 ### Docs ###
 docs/
+
+### Local secrets ###
+.env
+src/main/resources/application-local.yml
