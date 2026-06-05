@@ -1,18 +1,44 @@
 package org.example.ca_agent.agent;
 
-import lombok.RequiredArgsConstructor;
+import org.example.ca_agent.common.JsonUtils;
+import org.example.ca_agent.config.AgentModeProperties;
 import org.example.ca_agent.dto.agent.CompetitiveAnalysisDTO;
 import org.example.ca_agent.dto.agent.ProductProfileSetDTO;
 import org.example.ca_agent.enums.AgentType;
 import org.example.ca_agent.enums.TaskStatus;
+import org.example.ca_agent.prompt.AnalyzerPrompt;
+import org.example.ca_agent.service.AgentOutputValidator;
+import org.example.ca_agent.service.StructuredLlmService;
 import org.example.ca_agent.workflow.CompetitiveAnalysisState;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class AnalyzerAgent implements AgentNode {
+
+    private final AgentModeProperties modeProperties;
+    private final StructuredLlmService structuredLlmService;
+    private final AnalyzerPrompt analyzerPrompt;
+    private final AgentOutputValidator outputValidator;
+
+    public AnalyzerAgent() {
+        this(new AgentModeProperties(), null, null, null);
+    }
+
+    @Autowired
+    public AnalyzerAgent(
+            AgentModeProperties modeProperties,
+            StructuredLlmService structuredLlmService,
+            AnalyzerPrompt analyzerPrompt,
+            AgentOutputValidator outputValidator
+    ) {
+        this.modeProperties = modeProperties;
+        this.structuredLlmService = structuredLlmService;
+        this.analyzerPrompt = analyzerPrompt;
+        this.outputValidator = outputValidator;
+    }
 
     @Override
     public AgentType getAgentType() {
@@ -22,6 +48,29 @@ public class AnalyzerAgent implements AgentNode {
     @Override
     public CompetitiveAnalysisState execute(CompetitiveAnalysisState state) {
         state.setStatus(TaskStatus.ANALYZING);
+        if (modeProperties.isLlm()) {
+            ProductProfileSetDTO profileSet = state.getProductProfileSet();
+            CompetitiveAnalysisDTO analysis = structuredLlmService.generate(
+                    AnalyzerPrompt.SYSTEM_PROMPT,
+                    analyzerPrompt.buildUserPrompt(
+                            JsonUtils.toJson(profileSet),
+                            JsonUtils.toJson(state.getRawSourceSet().getEvidencePool()),
+                            JsonUtils.toJson(state.getRepairInstructions())
+                    ),
+                    CompetitiveAnalysisDTO.class
+            );
+            analysis.setTaskId(profileSet.getTaskId());
+            outputValidator.validateAnalyzer(
+                    analysis,
+                    profileSet.getTaskId(),
+                    profileSet.getProducts().stream()
+                            .map(ProductProfileSetDTO.ProductProfile::getProductName)
+                            .toList(),
+                    state.getRawSourceSet().getEvidencePool()
+            );
+            state.setCompetitiveAnalysis(analysis);
+            return state;
+        }
 
         CompetitiveAnalysisDTO analysis = new CompetitiveAnalysisDTO();
         analysis.setTaskId(state.getProductProfileSet().getTaskId());
