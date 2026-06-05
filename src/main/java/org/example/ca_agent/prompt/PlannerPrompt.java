@@ -1,10 +1,29 @@
 package org.example.ca_agent.prompt;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 public class PlannerPrompt {
 
+    public static final String VERSION = "planner_prompt_v1";
+    public static final String SYSTEM_PROMPT = """
+            Prompt version: planner_prompt_v1
+            You are PlannerAgent. Plan the competitive analysis workflow without collecting facts or writing a report.
+            Return one pure JSON object only. Do not use Markdown or add fields outside the required DTO.
+            Preserve the real taskId. Use exact enum values and never invent evidenceIds.
+            """;
+
+    public String buildUserPrompt(String taskInputJson) {
+        return """
+                TaskInput:
+                %s
+
+                Create a TaskPlanDTO JSON object with required fields:
+                taskId, detectedDomain, templateId, confidence, products, analysisGoal,
+                analysisDimensions, collectionTasks, workflow.
+                Each collectionTasks item must contain productName, queries, targetDimensions,
+                and preferredSourceTypes using valid SourceType enum values.
+                collectionTasks must cover every target product.
+                """.formatted(taskInputJson);
+    }
 }
