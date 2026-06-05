@@ -1,20 +1,47 @@
 package org.example.ca_agent.agent;
 
-import lombok.RequiredArgsConstructor;
+import org.example.ca_agent.common.JsonUtils;
+import org.example.ca_agent.config.AgentModeProperties;
 import org.example.ca_agent.dto.agent.ProductProfileSetDTO;
+import org.example.ca_agent.dto.agent.RawSourceSetDTO;
 import org.example.ca_agent.enums.AgentType;
 import org.example.ca_agent.enums.TaskStatus;
 import org.example.ca_agent.schema.Claim;
 import org.example.ca_agent.schema.Evidence;
 import org.example.ca_agent.mock.MockCompetitiveAnalysisFixtures;
+import org.example.ca_agent.prompt.ExtractorPrompt;
+import org.example.ca_agent.service.AgentOutputValidator;
+import org.example.ca_agent.service.StructuredLlmService;
 import org.example.ca_agent.workflow.CompetitiveAnalysisState;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
-@RequiredArgsConstructor
 public class ExtractorAgent implements AgentNode {
+
+    private final AgentModeProperties modeProperties;
+    private final StructuredLlmService structuredLlmService;
+    private final ExtractorPrompt extractorPrompt;
+    private final AgentOutputValidator outputValidator;
+
+    public ExtractorAgent() {
+        this(new AgentModeProperties(), null, null, null);
+    }
+
+    @Autowired
+    public ExtractorAgent(
+            AgentModeProperties modeProperties,
+            StructuredLlmService structuredLlmService,
+            ExtractorPrompt extractorPrompt,
+            AgentOutputValidator outputValidator
+    ) {
+        this.modeProperties = modeProperties;
+        this.structuredLlmService = structuredLlmService;
+        this.extractorPrompt = extractorPrompt;
+        this.outputValidator = outputValidator;
+    }
 
     @Override
     public AgentType getAgentType() {
@@ -24,6 +51,25 @@ public class ExtractorAgent implements AgentNode {
     @Override
     public CompetitiveAnalysisState execute(CompetitiveAnalysisState state) {
         state.setStatus(TaskStatus.EXTRACTING);
+        if (modeProperties.isLlm()) {
+            RawSourceSetDTO rawSourceSet = state.getRawSourceSet();
+            ProductProfileSetDTO profileSet = structuredLlmService.generate(
+                    ExtractorPrompt.SYSTEM_PROMPT,
+                    extractorPrompt.buildUserPrompt(
+                            JsonUtils.toJson(rawSourceSet),
+                            JsonUtils.toJson(state.getRepairInstructions())
+                    ),
+                    ProductProfileSetDTO.class
+            );
+            profileSet.setTaskId(rawSourceSet.getTaskId());
+            outputValidator.validateExtractor(
+                    profileSet,
+                    rawSourceSet.getTaskId(),
+                    rawSourceSet.getEvidencePool()
+            );
+            state.setProductProfileSet(profileSet);
+            return state;
+        }
 
         ProductProfileSetDTO profileSet = new ProductProfileSetDTO();
         profileSet.setTaskId(state.getRawSourceSet().getTaskId());

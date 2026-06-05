@@ -2,9 +2,15 @@ package org.example.ca_agent.agent;
 
 import org.example.ca_agent.common.JsonUtils;
 import org.example.ca_agent.config.AgentModeProperties;
+import org.example.ca_agent.dto.agent.ProductProfileSetDTO;
+import org.example.ca_agent.dto.agent.RawSourceSetDTO;
+import org.example.ca_agent.dto.agent.RepairInstructionDTO;
 import org.example.ca_agent.dto.agent.TaskInputDTO;
 import org.example.ca_agent.dto.agent.TaskPlanDTO;
+import org.example.ca_agent.prompt.ExtractorPrompt;
 import org.example.ca_agent.prompt.PlannerPrompt;
+import org.example.ca_agent.schema.Claim;
+import org.example.ca_agent.schema.Evidence;
 import org.example.ca_agent.service.AgentOutputValidator;
 import org.example.ca_agent.service.LlmChatService;
 import org.example.ca_agent.service.ModelChatGateway;
@@ -40,6 +46,29 @@ class RealPromptAgentTest {
         assertThat(gateway.userPrompt).contains("\"taskId\":\"task-1\"");
     }
 
+    @Test
+    void extractorUsesEvidenceAndRepairInstructionsInLlmMode() {
+        RecordingGateway gateway = new RecordingGateway(JsonUtils.toJson(validProfileSet("model-task")));
+        ExtractorAgent agent = new ExtractorAgent(
+                llmMode(),
+                new StructuredLlmService(new LlmChatService(gateway)),
+                new ExtractorPrompt(),
+                new AgentOutputValidator()
+        );
+        CompetitiveAnalysisState state = new CompetitiveAnalysisState();
+        state.setRawSourceSet(rawSourceSet());
+        RepairInstructionDTO repair = new RepairInstructionDTO();
+        repair.setInstruction("relink evidence");
+        state.setRepairInstructions(List.of(repair));
+
+        agent.execute(state);
+
+        assertThat(state.getProductProfileSet().getTaskId()).isEqualTo("task-1");
+        assertThat(state.getProductProfileSet().getProducts()).hasSize(1);
+        assertThat(gateway.systemPrompt).contains(ExtractorPrompt.VERSION);
+        assertThat(gateway.userPrompt).contains("\"evidenceId\":\"ev-1\"", "relink evidence");
+    }
+
     private AgentModeProperties llmMode() {
         AgentModeProperties properties = new AgentModeProperties();
         properties.setMode(AgentModeProperties.Mode.LLM);
@@ -65,6 +94,36 @@ class RealPromptAgentTest {
         TaskPlanDTO.CollectionTask task = new TaskPlanDTO.CollectionTask();
         task.setProductName(productName);
         return task;
+    }
+
+    private RawSourceSetDTO rawSourceSet() {
+        RawSourceSetDTO rawSourceSet = new RawSourceSetDTO();
+        rawSourceSet.setTaskId("task-1");
+        rawSourceSet.setEvidencePool(List.of(evidence()));
+        rawSourceSet.setRawSources(List.of());
+        rawSourceSet.setMissingSources(List.of());
+        return rawSourceSet;
+    }
+
+    private ProductProfileSetDTO validProfileSet(String taskId) {
+        Claim claim = new Claim();
+        claim.setEvidenceIds(List.of("ev-1"));
+
+        ProductProfileSetDTO.ProductProfile product = new ProductProfileSetDTO.ProductProfile();
+        product.setProductName("Product A");
+        product.setClaims(List.of(claim));
+
+        ProductProfileSetDTO output = new ProductProfileSetDTO();
+        output.setTaskId(taskId);
+        output.setProducts(List.of(product));
+        return output;
+    }
+
+    private Evidence evidence() {
+        Evidence evidence = new Evidence();
+        evidence.setEvidenceId("ev-1");
+        evidence.setProductName("Product A");
+        return evidence;
     }
 
     private static class RecordingGateway implements ModelChatGateway {
