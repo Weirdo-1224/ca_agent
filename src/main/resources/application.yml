@@ -47,3 +47,7 @@ management:
     web:
       exposure:
         include: health,info
+
+ca-agent:
+  agent:
+    mode: ${CA_AGENT_AGENT_MODE:mock}
