@@ -1,19 +1,45 @@
 package org.example.ca_agent.agent;
 
-import lombok.RequiredArgsConstructor;
+import org.example.ca_agent.common.JsonUtils;
+import org.example.ca_agent.config.AgentModeProperties;
 import org.example.ca_agent.dto.agent.ReportDraftDTO;
 import org.example.ca_agent.enums.AgentType;
 import org.example.ca_agent.enums.TaskStatus;
 import org.example.ca_agent.mock.MockCompetitiveAnalysisFixtures;
+import org.example.ca_agent.prompt.WriterPrompt;
+import org.example.ca_agent.service.AgentOutputValidator;
+import org.example.ca_agent.service.StructuredLlmService;
 import org.example.ca_agent.workflow.CompetitiveAnalysisState;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
-@RequiredArgsConstructor
 public class WriterAgent implements AgentNode {
+
+    private final AgentModeProperties modeProperties;
+    private final StructuredLlmService structuredLlmService;
+    private final WriterPrompt writerPrompt;
+    private final AgentOutputValidator outputValidator;
+
+    public WriterAgent() {
+        this(new AgentModeProperties(), null, null, null);
+    }
+
+    @Autowired
+    public WriterAgent(
+            AgentModeProperties modeProperties,
+            StructuredLlmService structuredLlmService,
+            WriterPrompt writerPrompt,
+            AgentOutputValidator outputValidator
+    ) {
+        this.modeProperties = modeProperties;
+        this.structuredLlmService = structuredLlmService;
+        this.writerPrompt = writerPrompt;
+        this.outputValidator = outputValidator;
+    }
 
     @Override
     public AgentType getAgentType() {
@@ -23,6 +49,28 @@ public class WriterAgent implements AgentNode {
     @Override
     public CompetitiveAnalysisState execute(CompetitiveAnalysisState state) {
         state.setStatus(TaskStatus.WRITING);
+        if (modeProperties.isLlm()) {
+            String taskId = state.getCompetitiveAnalysis().getTaskId();
+            ReportDraftDTO reportDraft = structuredLlmService.generate(
+                    WriterPrompt.SYSTEM_PROMPT,
+                    writerPrompt.buildUserPrompt(
+                            JsonUtils.toJson(state.getProductProfileSet()),
+                            JsonUtils.toJson(state.getCompetitiveAnalysis()),
+                            JsonUtils.toJson(state.getRawSourceSet().getEvidencePool()),
+                            JsonUtils.toJson(state.getRepairInstructions())
+                    ),
+                    ReportDraftDTO.class
+            );
+            reportDraft.setTaskId(taskId);
+            reportDraft.setSourceList(state.getRawSourceSet().getEvidencePool());
+            outputValidator.validateWriter(
+                    reportDraft,
+                    taskId,
+                    state.getRawSourceSet().getEvidencePool()
+            );
+            state.setReportDraft(reportDraft);
+            return state;
+        }
 
         ReportDraftDTO reportDraft = new ReportDraftDTO();
         reportDraft.setTaskId(state.getCompetitiveAnalysis().getTaskId());

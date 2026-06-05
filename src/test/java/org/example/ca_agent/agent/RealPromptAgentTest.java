@@ -6,11 +6,13 @@ import org.example.ca_agent.dto.agent.CompetitiveAnalysisDTO;
 import org.example.ca_agent.dto.agent.ProductProfileSetDTO;
 import org.example.ca_agent.dto.agent.RawSourceSetDTO;
 import org.example.ca_agent.dto.agent.RepairInstructionDTO;
+import org.example.ca_agent.dto.agent.ReportDraftDTO;
 import org.example.ca_agent.dto.agent.TaskInputDTO;
 import org.example.ca_agent.dto.agent.TaskPlanDTO;
 import org.example.ca_agent.prompt.AnalyzerPrompt;
 import org.example.ca_agent.prompt.ExtractorPrompt;
 import org.example.ca_agent.prompt.PlannerPrompt;
+import org.example.ca_agent.prompt.WriterPrompt;
 import org.example.ca_agent.schema.Claim;
 import org.example.ca_agent.schema.Evidence;
 import org.example.ca_agent.service.AgentOutputValidator;
@@ -21,6 +23,7 @@ import org.example.ca_agent.workflow.CompetitiveAnalysisState;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -94,6 +97,32 @@ class RealPromptAgentTest {
         assertThat(gateway.systemPrompt).contains(AnalyzerPrompt.VERSION);
         assertThat(gateway.userPrompt).contains("\"productName\":\"Product A\"", "\"evidenceId\":\"ev-1\"");
         assertThat(gateway.userPrompt).contains("complete matrix");
+    }
+
+    @Test
+    void writerUsesRealEvidencePoolAsSourceListInLlmMode() {
+        RecordingGateway gateway = new RecordingGateway(JsonUtils.toJson(validReport("model-task")));
+        WriterAgent agent = new WriterAgent(
+                llmMode(),
+                new StructuredLlmService(new LlmChatService(gateway)),
+                new WriterPrompt(),
+                new AgentOutputValidator()
+        );
+        CompetitiveAnalysisState state = new CompetitiveAnalysisState();
+        state.setProductProfileSet(validProfileSet("task-1"));
+        state.setCompetitiveAnalysis(validAnalysis("task-1"));
+        state.setRawSourceSet(rawSourceSet());
+        RepairInstructionDTO repair = new RepairInstructionDTO();
+        repair.setInstruction("add section");
+        state.setRepairInstructions(List.of(repair));
+
+        agent.execute(state);
+
+        assertThat(state.getReportDraft().getTaskId()).isEqualTo("task-1");
+        assertThat(state.getReportDraft().getSections()).hasSize(14);
+        assertThat(state.getReportDraft().getSourceList()).isEqualTo(state.getRawSourceSet().getEvidencePool());
+        assertThat(gateway.systemPrompt).contains(WriterPrompt.VERSION);
+        assertThat(gateway.userPrompt).contains("add section", "\"evidenceId\":\"ev-1\"");
     }
 
     private AgentModeProperties llmMode() {
@@ -171,6 +200,24 @@ class RealPromptAgentTest {
         output.setProductOpportunities(List.of());
         output.setRisks(List.of());
         output.setSwotSummary(List.of());
+        return output;
+    }
+
+    private ReportDraftDTO validReport(String taskId) {
+        Evidence inventedSource = new Evidence();
+        inventedSource.setEvidenceId("invented-source");
+
+        ReportDraftDTO output = new ReportDraftDTO();
+        output.setTaskId(taskId);
+        output.setSections(IntStream.range(0, 14)
+                .mapToObj(index -> {
+                    ReportDraftDTO.ReportSection section = new ReportDraftDTO.ReportSection();
+                    section.setTitle("Section " + index);
+                    section.setEvidenceIds(List.of("ev-1"));
+                    return section;
+                })
+                .toList());
+        output.setSourceList(List.of(inventedSource));
         return output;
     }
 
