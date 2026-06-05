@@ -13,6 +13,25 @@ spring:
       mode: always
       schema-locations: classpath:schema.sql
 
+  ai:
+    model:
+      chat: ${CA_AGENT_AI_MODEL_CHAT:none}
+      embedding: none
+      image: none
+      moderation: none
+      audio:
+        speech: none
+        transcription: none
+    openai:
+      api-key: ${CA_AGENT_OPENAI_API_KEY:}
+      base-url: ${CA_AGENT_OPENAI_BASE_URL:https://ark.cn-beijing.volces.com/api/v3}
+      chat:
+        completions-path: ${CA_AGENT_OPENAI_CHAT_COMPLETIONS_PATH:/chat/completions}
+        options:
+          model: ${CA_AGENT_OPENAI_CHAT_MODEL:doubao-seed-2-0-lite-260215}
+          temperature: ${CA_AGENT_OPENAI_TEMPERATURE:0.3}
+          max-tokens: ${CA_AGENT_OPENAI_MAX_TOKENS:2048}
+
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
