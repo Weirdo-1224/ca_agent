@@ -13,14 +13,15 @@ public class SpringAiModelChatGateway implements ModelChatGateway {
     private final ObjectProvider<ChatClient.Builder> chatClientBuilderProvider;
 
     @Override
-    public String call(String prompt) {
+    public String call(String systemPrompt, String userPrompt) {
         ChatClient.Builder chatClientBuilder = chatClientBuilderProvider.getIfAvailable();
         if (chatClientBuilder == null) {
             throw new BizException(503, "LLM chat model is not configured");
         }
         return chatClientBuilder.build()
                 .prompt()
-                .user(prompt)
+                .system(systemPrompt)
+                .user(userPrompt)
                 .call()
                 .content();
     }

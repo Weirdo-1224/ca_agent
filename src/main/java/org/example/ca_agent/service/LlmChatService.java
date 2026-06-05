@@ -10,9 +10,14 @@ public class LlmChatService {
     private final ModelChatGateway modelChatGateway;
 
     public String callSimpleChat(String prompt) {
-        if (prompt == null || prompt.trim().isEmpty()) {
+        return callChat("", prompt);
+    }
+
+    public String callChat(String systemPrompt, String userPrompt) {
+        if (userPrompt == null || userPrompt.trim().isEmpty()) {
             throw new IllegalArgumentException("prompt must not be blank");
         }
-        return modelChatGateway.call(prompt.trim());
+        String normalizedSystemPrompt = systemPrompt == null ? "" : systemPrompt.trim();
+        return modelChatGateway.call(normalizedSystemPrompt, userPrompt.trim());
     }
 }

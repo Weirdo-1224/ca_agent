@@ -16,7 +16,20 @@ class LlmChatServiceTest {
         String response = service.callSimpleChat("  ping  ");
 
         assertThat(response).isEqualTo("pong");
-        assertThat(gateway.prompt).isEqualTo("ping");
+        assertThat(gateway.systemPrompt).isEmpty();
+        assertThat(gateway.userPrompt).isEqualTo("ping");
+    }
+
+    @Test
+    void callChat_delegatesSeparateTrimmedPromptsToGateway() {
+        RecordingModelChatGateway gateway = new RecordingModelChatGateway("result");
+        LlmChatService service = new LlmChatService(gateway);
+
+        String response = service.callChat("  system rules  ", "  user input  ");
+
+        assertThat(response).isEqualTo("result");
+        assertThat(gateway.systemPrompt).isEqualTo("system rules");
+        assertThat(gateway.userPrompt).isEqualTo("user input");
     }
 
     @Test
@@ -30,7 +43,7 @@ class LlmChatServiceTest {
 
     @Test
     void callSimpleChat_throwsBizExceptionWhenModelGatewayUnavailable() {
-        LlmChatService service = new LlmChatService(prompt -> {
+        LlmChatService service = new LlmChatService((systemPrompt, userPrompt) -> {
             throw new BizException(503, "LLM chat model is not configured");
         });
 
@@ -42,15 +55,17 @@ class LlmChatServiceTest {
     private static class RecordingModelChatGateway implements ModelChatGateway {
 
         private final String response;
-        private String prompt;
+        private String systemPrompt;
+        private String userPrompt;
 
         private RecordingModelChatGateway(String response) {
             this.response = response;
         }
 
         @Override
-        public String call(String prompt) {
-            this.prompt = prompt;
+        public String call(String systemPrompt, String userPrompt) {
+            this.systemPrompt = systemPrompt;
+            this.userPrompt = userPrompt;
             return response;
         }
     }
