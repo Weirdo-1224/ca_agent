@@ -22,7 +22,9 @@ public class PlannerPrompt {
                 taskId, detectedDomain, templateId, confidence, products, analysisGoal,
                 analysisDimensions, collectionTasks, workflow.
                 Each collectionTasks item must contain productName, queries, targetDimensions,
-                and preferredSourceTypes using valid SourceType enum values.
+                and preferredSourceTypes using only these exact SourceType enum values:
+                OFFICIAL_SITE, PRICING_PAGE, DOCUMENTATION, BLOG, CHANGELOG, GITHUB,
+                REVIEW_ARTICLE, COMMUNITY_DISCUSSION, NEWS, USER_COMMENT, UNKNOWN.
                 collectionTasks must cover every target product.
                 """.formatted(taskInputJson);
     }

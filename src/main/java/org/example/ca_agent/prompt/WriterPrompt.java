@@ -35,6 +35,9 @@ public class WriterPrompt {
 
                 Create a ReportDraftDTO JSON object with required fields:
                 taskId, reportTitle, reportFormat, sections, sourceList.
+                Each section may use only these exact fields:
+                sectionId, title, content, relatedClaimIds, evidenceIds.
+                Do not generate sourceList content; set sourceList to an empty JSON array because the application supplies it.
                 sections must contain all 14 standard titles:
                 execution summary, analysis background, competitor overview, positioning comparison,
                 core capability matrix, agent capability comparison, codebase understanding comparison,

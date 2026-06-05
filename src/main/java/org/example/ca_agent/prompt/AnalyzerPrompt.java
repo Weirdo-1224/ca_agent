@@ -31,6 +31,15 @@ public class AnalyzerPrompt {
 
                 Create a CompetitiveAnalysisDTO JSON object with required fields:
                 taskId, comparisonMatrix, keyFindings, productOpportunities, risks, swotSummary.
+                Use only these exact nested structures:
+                ComparisonMatrixItem: dimension, subDimension, items.
+                ComparisonProductItem in items: productName, supportLevel, summary, evidenceIds.
+                KeyFinding: findingId, title, description, relatedProducts, evidenceIds, confidence.
+                ProductOpportunity: opportunityId, title, description, targetUsers, requiredCapabilities, priority, evidenceIds.
+                Risk: riskId, title, description, severity, evidenceIds.
+                SwotSummary: productName, strengths, weaknesses, opportunities, threats.
+                Each SwotItem: point, explanation, evidenceIds.
+                comparisonMatrix and swotSummary must be JSON arrays. confidence must be a JSON number.
                 comparisonMatrix must cover every supplied product and every supported conclusion must use evidenceIds.
                 """.formatted(productProfileSetJson, evidencePoolJson, repairInstructionsJson);
     }

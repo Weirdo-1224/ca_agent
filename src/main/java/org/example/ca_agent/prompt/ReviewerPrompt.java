@@ -32,6 +32,14 @@ public class ReviewerPrompt {
 
                 Create a ReviewResultDTO JSON object with required fields:
                 taskId, passed, score, summary, issues, nextAction.
+                ReviewIssue fields: issueId, severity, type, description, targetAgent,
+                targetProduct, targetDimension, repairInstruction.
+                NextAction fields: action, targetAgent, reason.
+                AgentType values: PLANNER_AGENT, COLLECTOR_AGENT, EXTRACTOR_AGENT,
+                ANALYZER_AGENT, WRITER_AGENT, REVIEWER_AGENT.
+                ReviewIssueType values: MISSING_EVIDENCE, EVIDENCE_NOT_LINKED, SCHEMA_MISSING_FIELD,
+                COMPARISON_INCOMPLETE, VAGUE_FINDING, REPORT_MISSING_SECTION,
+                CITATION_FORMAT_ERROR, HALLUCINATION_RISK, UNKNOWN_FIELD_TOO_MANY.
                 Each issue targetAgent and nextAction targetAgent must use a valid AgentType enum value.
                 nextAction.action must be finish, repair, or human_review.
                 """.formatted(reviewStateJson, repairInstructionsJson, iterationCount, maxIterations);

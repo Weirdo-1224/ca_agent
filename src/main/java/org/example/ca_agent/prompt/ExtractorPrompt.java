@@ -24,6 +24,11 @@ public class ExtractorPrompt {
 
                 Create a ProductProfileSetDTO JSON object with required fields taskId and products.
                 Each product must include productName and claims. Every claim must include evidenceIds.
+                Each claim may use only these exact fields:
+                claimId, productName, dimension, statement, confidence, evidenceIds, riskLevel.
+                Use statement for claim text. Do not use claimText or add other fields.
+                confidence must be a JSON number from 0.0 to 1.0, not a string.
+                riskLevel must be low, medium, or high.
                 Use unknown for facts that cannot be supported by the supplied evidence.
                 """.formatted(rawSourceSetJson, repairInstructionsJson);
     }

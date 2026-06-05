@@ -13,7 +13,20 @@ class AgentPromptTest {
         assertSystemPrompt(PlannerPrompt.SYSTEM_PROMPT, PlannerPrompt.VERSION);
         assertThat(userPrompt)
                 .contains("TaskInput", "\"taskId\":\"task-1\"")
-                .contains("collectionTasks", "analysisDimensions", "workflow");
+                .contains("collectionTasks", "analysisDimensions", "workflow")
+                .contains(
+                        "OFFICIAL_SITE",
+                        "PRICING_PAGE",
+                        "DOCUMENTATION",
+                        "BLOG",
+                        "CHANGELOG",
+                        "GITHUB",
+                        "REVIEW_ARTICLE",
+                        "COMMUNITY_DISCUSSION",
+                        "NEWS",
+                        "USER_COMMENT",
+                        "UNKNOWN"
+                );
     }
 
     @Test
@@ -27,7 +40,10 @@ class AgentPromptTest {
         assertThat(userPrompt)
                 .contains("RawSourceSet", "\"taskId\":\"task-1\"")
                 .contains("repairInstructions", "relink evidence")
-                .contains("products", "claims", "evidenceIds");
+                .contains("products", "claims", "evidenceIds")
+                .contains("claimId", "productName", "dimension", "statement", "confidence", "riskLevel")
+                .contains("Do not use claimText")
+                .contains("confidence must be a JSON number", "riskLevel must be low, medium, or high");
     }
 
     @Test
@@ -41,7 +57,14 @@ class AgentPromptTest {
         assertSystemPrompt(AnalyzerPrompt.SYSTEM_PROMPT, AnalyzerPrompt.VERSION);
         assertThat(userPrompt)
                 .contains("ProductProfileSet", "EvidencePool", "repairInstructions")
-                .contains("comparisonMatrix", "keyFindings", "evidenceIds");
+                .contains("comparisonMatrix", "keyFindings", "evidenceIds")
+                .contains(
+                        "ComparisonMatrixItem",
+                        "ComparisonProductItem",
+                        "ProductOpportunity",
+                        "SwotSummary",
+                        "SwotItem"
+                );
     }
 
     @Test
@@ -56,7 +79,8 @@ class AgentPromptTest {
         assertSystemPrompt(WriterPrompt.SYSTEM_PROMPT, WriterPrompt.VERSION);
         assertThat(userPrompt)
                 .contains("ProductProfileSet", "CompetitiveAnalysis", "EvidencePool", "repairInstructions")
-                .contains("reportTitle", "sections", "sourceList");
+                .contains("reportTitle", "sections", "sourceList")
+                .contains("sectionId", "relatedClaimIds", "Do not generate sourceList");
     }
 
     @Test
@@ -71,7 +95,8 @@ class AgentPromptTest {
         assertSystemPrompt(ReviewerPrompt.SYSTEM_PROMPT, ReviewerPrompt.VERSION);
         assertThat(userPrompt)
                 .contains("ReviewState", "repairInstructions", "IterationCount: 1", "MaxIterations: 3")
-                .contains("passed", "score", "issues", "nextAction");
+                .contains("passed", "score", "issues", "nextAction")
+                .contains("ReviewIssue fields", "NextAction fields", "PLANNER_AGENT", "HALLUCINATION_RISK");
     }
 
     private static void assertSystemPrompt(String systemPrompt, String version) {
