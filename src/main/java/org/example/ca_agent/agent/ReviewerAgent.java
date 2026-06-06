@@ -58,7 +58,8 @@ public class ReviewerAgent implements AgentNode {
                             JsonUtils.toJson(state),
                             JsonUtils.toJson(state.getRepairInstructions()),
                             iterationCount,
-                            maxIterations
+                            maxIterations,
+                            state.getTaskInput().getLanguage()
                     ),
                     ReviewResultDTO.class
             );

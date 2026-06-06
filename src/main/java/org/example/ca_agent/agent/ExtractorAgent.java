@@ -57,7 +57,8 @@ public class ExtractorAgent implements AgentNode {
                     ExtractorPrompt.SYSTEM_PROMPT,
                     extractorPrompt.buildUserPrompt(
                             JsonUtils.toJson(rawSourceSet),
-                            JsonUtils.toJson(state.getRepairInstructions())
+                            JsonUtils.toJson(state.getRepairInstructions()),
+                            state.getTaskInput().getLanguage()
                     ),
                     ProductProfileSetDTO.class
             );

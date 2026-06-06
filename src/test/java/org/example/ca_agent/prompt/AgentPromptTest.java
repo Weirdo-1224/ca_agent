@@ -8,7 +8,7 @@ class AgentPromptTest {
 
     @Test
     void plannerPromptContainsVersionJsonConstraintInputAndRequiredFields() {
-        String userPrompt = new PlannerPrompt().buildUserPrompt("{\"taskId\":\"task-1\"}");
+        String userPrompt = new PlannerPrompt().buildUserPrompt("{\"taskId\":\"task-1\"}", "zh-CN");
 
         assertSystemPrompt(PlannerPrompt.SYSTEM_PROMPT, PlannerPrompt.VERSION);
         assertThat(userPrompt)
@@ -33,7 +33,8 @@ class AgentPromptTest {
     void extractorPromptContainsRepairInstructionsAndRequiredFields() {
         String userPrompt = new ExtractorPrompt().buildUserPrompt(
                 "{\"taskId\":\"task-1\"}",
-                "[{\"instruction\":\"relink evidence\"}]"
+                "[{\"instruction\":\"relink evidence\"}]",
+                "zh-CN"
         );
 
         assertSystemPrompt(ExtractorPrompt.SYSTEM_PROMPT, ExtractorPrompt.VERSION);
@@ -51,7 +52,8 @@ class AgentPromptTest {
         String userPrompt = new AnalyzerPrompt().buildUserPrompt(
                 "{\"products\":[]}",
                 "[{\"evidenceId\":\"ev-1\"}]",
-                "[{\"instruction\":\"complete matrix\"}]"
+                "[{\"instruction\":\"complete matrix\"}]",
+                "zh-CN"
         );
 
         assertSystemPrompt(AnalyzerPrompt.SYSTEM_PROMPT, AnalyzerPrompt.VERSION);
@@ -73,7 +75,8 @@ class AgentPromptTest {
                 "{\"products\":[]}",
                 "{\"comparisonMatrix\":[]}",
                 "[{\"evidenceId\":\"ev-1\"}]",
-                "[{\"instruction\":\"add section\"}]"
+                "[{\"instruction\":\"add section\"}]",
+                "zh-CN"
         );
 
         assertSystemPrompt(WriterPrompt.SYSTEM_PROMPT, WriterPrompt.VERSION);
@@ -89,7 +92,8 @@ class AgentPromptTest {
                 "{\"taskInput\":{\"taskId\":\"task-1\"}}",
                 "[{\"instruction\":\"review again\"}]",
                 1,
-                3
+                3,
+                "zh-CN"
         );
 
         assertSystemPrompt(ReviewerPrompt.SYSTEM_PROMPT, ReviewerPrompt.VERSION);

@@ -14,7 +14,7 @@ public class ExtractorPrompt {
             Preserve the real taskId, use exact enum values, and never invent evidenceIds.
             """;
 
-    public String buildUserPrompt(String rawSourceSetJson, String repairInstructionsJson) {
+    public String buildUserPrompt(String rawSourceSetJson, String repairInstructionsJson, String language) {
         return """
                 RawSourceSet:
                 %s
@@ -30,6 +30,13 @@ public class ExtractorPrompt {
                 confidence must be a JSON number from 0.0 to 1.0, not a string.
                 riskLevel must be low, medium, or high.
                 Use unknown for facts that cannot be supported by the supplied evidence.
-                """.formatted(rawSourceSetJson, repairInstructionsJson);
+                %s
+                """.formatted(rawSourceSetJson, repairInstructionsJson, languageInstruction(language));
+    }
+
+    private static String languageInstruction(String language) {
+        return "zh-CN".equals(language) || "zh".equals(language)
+                ? "Respond in Chinese (中文). All text content, titles, and descriptions must be in Chinese."
+                : "Respond in English. All text content, titles, and descriptions must be in English.";
     }
 }

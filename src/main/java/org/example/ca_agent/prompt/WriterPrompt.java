@@ -1,5 +1,7 @@
 package org.example.ca_agent.prompt;
 
+import java.util.List;
+
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,7 +20,8 @@ public class WriterPrompt {
             String productProfileSetJson,
             String competitiveAnalysisJson,
             String evidencePoolJson,
-            String repairInstructionsJson
+            String repairInstructionsJson,
+            String language
     ) {
         return """
                 ProductProfileSet:
@@ -39,15 +42,38 @@ public class WriterPrompt {
                 sectionId, title, content, relatedClaimIds, evidenceIds.
                 Do not generate sourceList content; set sourceList to an empty JSON array because the application supplies it.
                 sections must contain all 14 standard titles:
-                execution summary, analysis background, competitor overview, positioning comparison,
-                core capability matrix, agent capability comparison, codebase understanding comparison,
-                model and context comparison, pricing comparison, user feedback and pain points,
-                SWOT analysis, product opportunities, conclusions and recommendations, information sources.
+                %s
+                %s
                 """.formatted(
                 productProfileSetJson,
                 competitiveAnalysisJson,
                 evidencePoolJson,
-                repairInstructionsJson
+                repairInstructionsJson,
+                getStandardTitles(language),
+                languageInstruction(language)
         );
+    }
+
+    public static List<String> getStandardTitles(String language) {
+        if ("zh-CN".equals(language) || "zh".equals(language)) {
+            return List.of(
+                    "执行摘要", "分析背景", "竞品概览", "产品定位对比",
+                    "核心功能矩阵", "Agent 编程能力对比", "代码库理解能力对比",
+                    "模型与上下文能力对比", "定价模式对比", "用户评价与痛点",
+                    "SWOT 分析", "产品机会点", "结论与建议", "信息来源"
+            );
+        }
+        return List.of(
+                "execution summary", "analysis background", "competitor overview", "positioning comparison",
+                "core capability matrix", "agent capability comparison", "codebase understanding comparison",
+                "model and context comparison", "pricing comparison", "user feedback and pain points",
+                "SWOT analysis", "product opportunities", "conclusions and recommendations", "information sources"
+        );
+    }
+
+    private static String languageInstruction(String language) {
+        return "zh-CN".equals(language) || "zh".equals(language)
+                ? "Respond in Chinese (中文). All text content, titles, and descriptions must be in Chinese."
+                : "Respond in English. All text content, titles, and descriptions must be in English.";
     }
 }

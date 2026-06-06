@@ -66,6 +66,7 @@ class RealPromptAgentTest {
                 new AgentOutputValidator()
         );
         CompetitiveAnalysisState state = new CompetitiveAnalysisState();
+        state.setTaskInput(taskInput());
         state.setRawSourceSet(rawSourceSet());
         RepairInstructionDTO repair = new RepairInstructionDTO();
         repair.setInstruction("relink evidence");
@@ -89,6 +90,7 @@ class RealPromptAgentTest {
                 new AgentOutputValidator()
         );
         CompetitiveAnalysisState state = new CompetitiveAnalysisState();
+        state.setTaskInput(taskInput());
         state.setProductProfileSet(validProfileSet("task-1"));
         state.setRawSourceSet(rawSourceSet());
         RepairInstructionDTO repair = new RepairInstructionDTO();
@@ -114,6 +116,7 @@ class RealPromptAgentTest {
                 new AgentOutputValidator()
         );
         CompetitiveAnalysisState state = new CompetitiveAnalysisState();
+        state.setTaskInput(taskInput());
         state.setProductProfileSet(validProfileSet("task-1"));
         state.setCompetitiveAnalysis(validAnalysis("task-1"));
         state.setRawSourceSet(rawSourceSet());
@@ -184,6 +187,7 @@ class RealPromptAgentTest {
         input.setTargetProducts(List.of("Product A", "Product B"));
         input.setAnalysisGoal("compare");
         input.setMaxIterations(3);
+        input.setLanguage("zh-CN");
         return input;
     }
 

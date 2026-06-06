@@ -57,7 +57,8 @@ public class WriterAgent implements AgentNode {
                             JsonUtils.toJson(state.getProductProfileSet()),
                             JsonUtils.toJson(state.getCompetitiveAnalysis()),
                             JsonUtils.toJson(state.getRawSourceSet().getEvidencePool()),
-                            JsonUtils.toJson(state.getRepairInstructions())
+                            JsonUtils.toJson(state.getRepairInstructions()),
+                            state.getTaskInput().getLanguage()
                     ),
                     ReportDraftDTO.class
             );

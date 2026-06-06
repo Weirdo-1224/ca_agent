@@ -17,7 +17,8 @@ public class AnalyzerPrompt {
     public String buildUserPrompt(
             String productProfileSetJson,
             String evidencePoolJson,
-            String repairInstructionsJson
+            String repairInstructionsJson,
+            String language
     ) {
         return """
                 ProductProfileSet:
@@ -41,6 +42,13 @@ public class AnalyzerPrompt {
                 Each SwotItem: point, explanation, evidenceIds.
                 comparisonMatrix and swotSummary must be JSON arrays. confidence must be a JSON number.
                 comparisonMatrix must cover every supplied product and every supported conclusion must use evidenceIds.
-                """.formatted(productProfileSetJson, evidencePoolJson, repairInstructionsJson);
+                %s
+                """.formatted(productProfileSetJson, evidencePoolJson, repairInstructionsJson, languageInstruction(language));
+    }
+
+    private static String languageInstruction(String language) {
+        return "zh-CN".equals(language) || "zh".equals(language)
+                ? "Respond in Chinese (中文). All text content, titles, and descriptions must be in Chinese."
+                : "Respond in English. All text content, titles, and descriptions must be in English.";
     }
 }

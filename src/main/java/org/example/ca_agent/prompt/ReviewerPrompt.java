@@ -18,7 +18,8 @@ public class ReviewerPrompt {
             String reviewStateJson,
             String repairInstructionsJson,
             int iterationCount,
-            int maxIterations
+            int maxIterations,
+            String language
     ) {
         return """
                 ReviewState:
@@ -34,6 +35,7 @@ public class ReviewerPrompt {
                 taskId, passed, score, summary, issues, nextAction.
                 ReviewIssue fields: issueId, severity, type, description, targetAgent,
                 targetProduct, targetDimension, repairInstruction.
+                repairInstruction must be a single string (not an array). If multiple instructions exist, join them with semicolons inside one string.
                 NextAction fields: action, targetAgent, reason.
                 AgentType values: PLANNER_AGENT, COLLECTOR_AGENT, EXTRACTOR_AGENT,
                 ANALYZER_AGENT, WRITER_AGENT, REVIEWER_AGENT.
@@ -42,6 +44,13 @@ public class ReviewerPrompt {
                 CITATION_FORMAT_ERROR, HALLUCINATION_RISK, UNKNOWN_FIELD_TOO_MANY.
                 Each issue targetAgent and nextAction targetAgent must use a valid AgentType enum value.
                 nextAction.action must be finish, repair, or human_review.
-                """.formatted(reviewStateJson, repairInstructionsJson, iterationCount, maxIterations);
+                %s
+                """.formatted(reviewStateJson, repairInstructionsJson, iterationCount, maxIterations, languageInstruction(language));
+    }
+
+    private static String languageInstruction(String language) {
+        return "zh-CN".equals(language) || "zh".equals(language)
+                ? "Respond in Chinese (中文). All text content, titles, and descriptions must be in Chinese."
+                : "Respond in English. All text content, titles, and descriptions must be in English.";
     }
 }

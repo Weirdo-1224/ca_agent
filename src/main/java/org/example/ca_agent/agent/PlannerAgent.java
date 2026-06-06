@@ -54,7 +54,7 @@ public class PlannerAgent implements AgentNode {
         if (modeProperties.isLlm()) {
             TaskPlanDTO taskPlan = structuredLlmService.generate(
                     PlannerPrompt.SYSTEM_PROMPT,
-                    plannerPrompt.buildUserPrompt(JsonUtils.toJson(input)),
+                    plannerPrompt.buildUserPrompt(JsonUtils.toJson(input), input.getLanguage()),
                     TaskPlanDTO.class
             );
             taskPlan.setTaskId(input.getTaskId());

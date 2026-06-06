@@ -1,6 +1,8 @@
 package org.example.ca_agent.dto.agent;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Data;
+import org.example.ca_agent.common.StringOrListDeserializer;
 import org.example.ca_agent.enums.AgentType;
 import org.example.ca_agent.enums.ReviewIssueType;
 
@@ -25,6 +27,7 @@ public class ReviewResultDTO {
         private AgentType targetAgent;
         private String targetProduct;
         private String targetDimension;
+        @JsonDeserialize(using = StringOrListDeserializer.class)
         private String repairInstruction;
     }
 

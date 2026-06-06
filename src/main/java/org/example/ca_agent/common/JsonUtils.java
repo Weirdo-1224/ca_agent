@@ -33,7 +33,9 @@ public final class JsonUtils {
         try {
             return OBJECT_MAPPER.readValue(json, clazz);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("JSON deserialization failed", e);
+            String preview = json.length() > 200 ? json.substring(0, 200) + "..." : json;
+            throw new RuntimeException("JSON deserialization failed: " + e.getOriginalMessage()
+                    + " | Preview: " + preview, e);
         }
     }
 

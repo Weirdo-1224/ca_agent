@@ -55,7 +55,8 @@ public class AnalyzerAgent implements AgentNode {
                     analyzerPrompt.buildUserPrompt(
                             JsonUtils.toJson(profileSet),
                             JsonUtils.toJson(state.getRawSourceSet().getEvidencePool()),
-                            JsonUtils.toJson(state.getRepairInstructions())
+                            JsonUtils.toJson(state.getRepairInstructions()),
+                            state.getTaskInput().getLanguage()
                     ),
                     CompetitiveAnalysisDTO.class
             );

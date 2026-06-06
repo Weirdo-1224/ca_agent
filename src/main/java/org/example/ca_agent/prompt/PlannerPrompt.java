@@ -13,7 +13,7 @@ public class PlannerPrompt {
             Preserve the real taskId. Use exact enum values and never invent evidenceIds.
             """;
 
-    public String buildUserPrompt(String taskInputJson) {
+    public String buildUserPrompt(String taskInputJson, String language) {
         return """
                 TaskInput:
                 %s
@@ -26,6 +26,13 @@ public class PlannerPrompt {
                 OFFICIAL_SITE, PRICING_PAGE, DOCUMENTATION, BLOG, CHANGELOG, GITHUB,
                 REVIEW_ARTICLE, COMMUNITY_DISCUSSION, NEWS, USER_COMMENT, UNKNOWN.
                 collectionTasks must cover every target product.
-                """.formatted(taskInputJson);
+                %s
+                """.formatted(taskInputJson, languageInstruction(language));
+    }
+
+    private static String languageInstruction(String language) {
+        return "zh-CN".equals(language) || "zh".equals(language)
+                ? "Respond in Chinese (中文). All text content, titles, and descriptions must be in Chinese."
+                : "Respond in English. All text content, titles, and descriptions must be in English.";
     }
 }
