@@ -25,7 +25,7 @@ public class MetasoSearchResponse {
         private String publishDate;
         private String date;
         private String source;
-        private Double score;
+        private String score;
         private Integer position;
         private List<String> authors;
         private String author;
