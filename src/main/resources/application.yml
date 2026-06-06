@@ -51,3 +51,9 @@ management:
 ca-agent:
   agent:
     mode: ${CA_AGENT_AGENT_MODE:mock}
+  search:
+    enabled: ${CA_AGENT_SEARCH_ENABLED:false}
+    api-key: ${CA_AGENT_SEARCH_API_KEY:}
+    base-url: ${CA_AGENT_SEARCH_BASE_URL:https://metaso.cn}
+    timeout: ${CA_AGENT_SEARCH_TIMEOUT:30000}
+    max-results-per-query: ${CA_AGENT_SEARCH_MAX_RESULTS:5}
