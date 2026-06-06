@@ -1,14 +1,21 @@
 package org.example.ca_agent.agent;
 
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.example.ca_agent.config.MetasoSearchProperties;
 import org.example.ca_agent.dto.agent.RawSourceSetDTO;
 import org.example.ca_agent.dto.agent.TaskPlanDTO;
+import org.example.ca_agent.dto.metaso.MetasoSearchResponse;
 import org.example.ca_agent.enums.AgentType;
 import org.example.ca_agent.enums.ReliabilityLevel;
 import org.example.ca_agent.enums.SourceType;
 import org.example.ca_agent.enums.TaskStatus;
 import org.example.ca_agent.schema.Evidence;
+import org.example.ca_agent.tool.EvidenceStoreTool;
+import org.example.ca_agent.tool.SourceRankTool;
+import org.example.ca_agent.tool.WebPageReaderTool;
+import org.example.ca_agent.tool.WebSearchTool;
 import org.example.ca_agent.workflow.CompetitiveAnalysisState;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -16,9 +23,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+@Slf4j
 @Component
-@RequiredArgsConstructor
 public class CollectorAgent implements AgentNode {
+
+    @Autowired
+    private WebSearchTool webSearchTool;
+    @Autowired
+    private WebPageReaderTool webPageReaderTool;
+    @Autowired
+    private SourceRankTool sourceRankTool;
+    @Autowired
+    private EvidenceStoreTool evidenceStoreTool;
+    @Autowired
+    private MetasoSearchProperties searchProperties;
 
     @Override
     public AgentType getAgentType() {
@@ -28,14 +46,25 @@ public class CollectorAgent implements AgentNode {
     @Override
     public CompetitiveAnalysisState execute(CompetitiveAnalysisState state) {
         state.setStatus(TaskStatus.COLLECTING);
+        if (evidenceStoreTool != null) {
+            evidenceStoreTool.resetCounter();
+        }
+
         TaskPlanDTO taskPlan = state.getTaskPlan();
         List<RawSourceSetDTO.RawSource> rawSources = new ArrayList<>();
         List<Evidence> evidencePool = new ArrayList<>();
 
-        for (String productName : taskPlan.getProducts()) {
-            addSourceAndEvidence(taskPlan.getTaskId(), productName, SourceType.OFFICIAL_SITE, "official", rawSources, evidencePool);
-            addSourceAndEvidence(taskPlan.getTaskId(), productName, SourceType.PRICING_PAGE, "pricing", rawSources, evidencePool);
-            addSourceAndEvidence(taskPlan.getTaskId(), productName, SourceType.DOCUMENTATION, "documentation", rawSources, evidencePool);
+        if (taskPlan.getCollectionTasks() != null) {
+            for (TaskPlanDTO.CollectionTask task : taskPlan.getCollectionTasks()) {
+                collectForProduct(task, taskPlan.getTaskId(), rawSources, evidencePool);
+            }
+        }
+
+        if (evidencePool.isEmpty()) {
+            log.warn("No evidence collected from search; falling back to mock data");
+            for (String productName : taskPlan.getProducts()) {
+                addMockEvidence(taskPlan.getTaskId(), productName, rawSources, evidencePool);
+            }
         }
 
         RawSourceSetDTO rawSourceSet = new RawSourceSetDTO();
@@ -47,11 +76,91 @@ public class CollectorAgent implements AgentNode {
         return state;
     }
 
-    private void addSourceAndEvidence(
+    private void collectForProduct(
+            TaskPlanDTO.CollectionTask task,
+            String taskId,
+            List<RawSourceSetDTO.RawSource> rawSources,
+            List<Evidence> evidencePool
+    ) {
+        String productName = task.getProductName();
+        List<String> queries = task.getQueries();
+        List<String> targetDimensions = task.getTargetDimensions();
+        List<SourceType> preferredTypes = task.getPreferredSourceTypes();
+
+        if (queries == null || queries.isEmpty()) {
+            queries = List.of(productName + " AI coding assistant");
+        }
+
+        int maxPerProduct = (searchProperties != null && searchProperties.isEnabled()) ? 5 : 3;
+        int collected = 0;
+
+        for (String query : queries) {
+            if (collected >= maxPerProduct) {
+                break;
+            }
+            if (webSearchTool == null) {
+                break;
+            }
+            List<MetasoSearchResponse.WebpageResult> results = webSearchTool.search(query);
+            for (MetasoSearchResponse.WebpageResult result : results) {
+                if (collected >= maxPerProduct) {
+                    break;
+                }
+                String url = result.getLink() != null ? result.getLink() : result.getUrl();
+                if (url == null || url.isBlank()) {
+                    continue;
+                }
+
+                ReliabilityLevel reliability = sourceRankTool.rank(url, result.getTitle(), result.getSnippet());
+                SourceType sourceType = sourceRankTool.classify(url, result.getTitle(), result.getSnippet());
+
+                if (!isPreferredType(preferredTypes, sourceType)) {
+                    continue;
+                }
+
+                String content = webPageReaderTool.read(url);
+                if (content.isBlank()) {
+                    content = result.getSnippet() != null ? result.getSnippet() : "";
+                }
+
+                List<String> dims = targetDimensions != null ? targetDimensions : List.of("general");
+
+                RawSourceSetDTO.RawSource rawSource = evidenceStoreTool.createRawSource(
+                        taskId, productName, sourceType,
+                        result.getTitle(), url, content,
+                        reliability, dims);
+                rawSources.add(rawSource);
+
+                Evidence evidence = evidenceStoreTool.createEvidence(
+                        taskId, productName, sourceType,
+                        result.getTitle(), url,
+                        rawSource.getContentSnippet(),
+                        reliability, dims);
+                evidencePool.add(evidence);
+
+                collected++;
+            }
+        }
+
+        if (collected < 3) {
+            log.warn("Product '{}' only collected {} evidence; filling with mock", productName, collected);
+            while (collected < 3) {
+                addMockEvidence(taskId, productName, rawSources, evidencePool);
+                collected++;
+            }
+        }
+    }
+
+    private boolean isPreferredType(List<SourceType> preferredTypes, SourceType actualType) {
+        if (preferredTypes == null || preferredTypes.isEmpty()) {
+            return true;
+        }
+        return preferredTypes.contains(actualType);
+    }
+
+    private void addMockEvidence(
             String taskId,
             String productName,
-            SourceType sourceType,
-            String dimension,
             List<RawSourceSetDTO.RawSource> rawSources,
             List<Evidence> evidencePool
     ) {
@@ -59,7 +168,14 @@ public class CollectorAgent implements AgentNode {
         int index = evidencePool.size() + 1;
         String sourceId = "src_" + normalized + "_" + index;
         String evidenceId = "ev_" + normalized + "_" + index;
-        String title = productName + " " + sourceType.name();
+
+        String[] dims = {"official", "pricing", "documentation"};
+        SourceType[] types = {SourceType.OFFICIAL_SITE, SourceType.PRICING_PAGE, SourceType.DOCUMENTATION};
+        int slot = (index - 1) % 3;
+        SourceType sourceType = types[slot];
+        String dimension = dims[slot];
+
+        String title = productName + " " + sourceType.getDescription();
         String url = "https://example.com/" + normalized + "/" + dimension;
         String snippet = productName + " mock " + dimension + " information for competitive analysis.";
 
