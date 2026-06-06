@@ -25,6 +25,9 @@ public class PlannerPrompt {
                 and preferredSourceTypes using only these exact SourceType enum values:
                 OFFICIAL_SITE, PRICING_PAGE, DOCUMENTATION, BLOG, CHANGELOG, GITHUB,
                 REVIEW_ARTICLE, COMMUNITY_DISCUSSION, NEWS, USER_COMMENT, UNKNOWN.
+                queries and targetDimensions must be arrays of plain strings only (never objects).
+                preferredSourceTypes must be an array of plain SourceType enum string values only.
+                workflow must be an array of plain strings only.
                 collectionTasks must cover every target product.
                 %s
                 """.formatted(taskInputJson, languageInstruction(language));
