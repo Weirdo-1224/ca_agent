@@ -33,8 +33,31 @@ public final class JsonUtils {
         try {
             return OBJECT_MAPPER.readValue(json, clazz);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("JSON deserialization failed", e);
+            String preview = json.length() > 200 ? json.substring(0, 200) + "..." : json;
+            throw new RuntimeException("JSON deserialization failed: " + e.getOriginalMessage()
+                    + " | Preview: " + preview, e);
         }
+    }
+
+    public static String extractJsonObject(String modelOutput) {
+        if (modelOutput == null || modelOutput.isBlank()) {
+            throw new IllegalArgumentException("Model output does not contain a JSON object");
+        }
+
+        for (int start = 0; start < modelOutput.length(); start++) {
+            if (modelOutput.charAt(start) != '{') {
+                continue;
+            }
+            int end = findJsonObjectEnd(modelOutput, start);
+            if (end >= 0) {
+                return modelOutput.substring(start, end + 1);
+            }
+        }
+        throw new IllegalArgumentException("Model output does not contain a complete JSON object");
+    }
+
+    public static <T> T fromModelJson(String modelOutput, Class<T> clazz) {
+        return fromJson(extractJsonObject(modelOutput), clazz);
     }
 
     public static <T> List<T> fromJsonList(String json, Class<T> elementClass) {
@@ -46,5 +69,37 @@ public final class JsonUtils {
         } catch (JsonProcessingException e) {
             throw new RuntimeException("JSON deserialization failed", e);
         }
+    }
+
+    private static int findJsonObjectEnd(String value, int start) {
+        int depth = 0;
+        boolean inString = false;
+        boolean escaped = false;
+
+        for (int index = start; index < value.length(); index++) {
+            char current = value.charAt(index);
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (current == '\\') {
+                    escaped = true;
+                } else if (current == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (current == '"') {
+                inString = true;
+            } else if (current == '{') {
+                depth++;
+            } else if (current == '}') {
+                depth--;
+                if (depth == 0) {
+                    return index;
+                }
+            }
+        }
+        return -1;
     }
 }
