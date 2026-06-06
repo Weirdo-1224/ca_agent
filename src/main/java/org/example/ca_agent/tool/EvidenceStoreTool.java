@@ -34,7 +34,7 @@ public class EvidenceStoreTool {
         rawSource.setTitle(title);
         rawSource.setUrl(url);
         rawSource.setRawText(content);
-        rawSource.setContentSnippet(truncate(content, 500));
+        rawSource.setContentSnippet(truncate(content, 300));
         rawSource.setCollectedAt(LocalDateTime.now());
         rawSource.setReliability(reliability);
         rawSource.setTargetDimensions(targetDimensions);
@@ -76,6 +76,10 @@ public class EvidenceStoreTool {
             return text;
         }
         return text.substring(0, maxLength) + "...";
+    }
+
+    public String truncate(String text) {
+        return truncate(text, 300);
     }
 
     public void resetCounter() {
