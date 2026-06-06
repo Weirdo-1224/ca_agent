@@ -1,5 +1,7 @@
 package org.example.ca_agent.agent;
 
+import lombok.RequiredArgsConstructor;
+import org.example.ca_agent.assembler.StateAssembler;
 import org.example.ca_agent.dto.agent.AgentRunTrace;
 import org.example.ca_agent.enums.AgentType;
 import org.example.ca_agent.workflow.CompetitiveAnalysisState;
@@ -13,10 +15,14 @@ import java.util.UUID;
  * 不侵入 Agent 内部逻辑，在 CompetitiveAnalysisGraph 调用层拦截。
  */
 @Component
+@RequiredArgsConstructor
 public class AgentRunTracer {
+
+    private final StateAssembler stateAssembler;
 
     /**
      * 追踪 Agent 执行全过程，记录 start/end/duration 和状态。
+     * 每个 Agent 执行后实时保存中间状态到数据库，支持前端轮询进度。
      */
     public void trace(AgentNode agent, CompetitiveAnalysisState state) {
         String taskId = state.getTaskInput().getTaskId();
@@ -28,9 +34,13 @@ public class AgentRunTracer {
             agent.execute(state);
             long durationMs = System.currentTimeMillis() - startMs;
             record(state, buildSuccessTrace(runId, taskId, agent.getAgentType(), startTime, durationMs));
+            // 实时保存中间状态
+            stateAssembler.saveState(state);
         } catch (Exception e) {
             long durationMs = System.currentTimeMillis() - startMs;
             record(state, buildFailureTrace(runId, taskId, agent.getAgentType(), startTime, durationMs, e));
+            // 失败时也保存状态
+            stateAssembler.saveState(state);
             throw e;
         }
     }

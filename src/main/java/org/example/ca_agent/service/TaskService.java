@@ -1,6 +1,7 @@
 package org.example.ca_agent.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.ca_agent.assembler.EntityAssembler;
 import org.example.ca_agent.assembler.StateAssembler;
 import org.example.ca_agent.common.BizException;
@@ -8,6 +9,7 @@ import org.example.ca_agent.dto.agent.TaskInputDTO;
 import org.example.ca_agent.dto.request.TaskCreateRequest;
 import org.example.ca_agent.dto.response.TaskDetailResponse;
 import org.example.ca_agent.entity.AnalysisTaskEntity;
+import org.example.ca_agent.enums.TaskStatus;
 import org.example.ca_agent.repository.TaskRepository;
 import org.example.ca_agent.workflow.CompetitiveAnalysisState;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TaskService {
@@ -27,9 +30,19 @@ public class TaskService {
     public TaskDetailResponse createTask(TaskCreateRequest request) {
         LocalDateTime now = LocalDateTime.now();
         TaskInputDTO taskInput = toTaskInput(request);
-        CompetitiveAnalysisState state = workflowService.run(taskInput);
-        stateAssembler.saveState(state);
-        return toTaskDetailResponse(state, now);
+
+        // 1. 初始化状态并立即保存到数据库
+        CompetitiveAnalysisState initialState = new CompetitiveAnalysisState();
+        initialState.setTaskInput(taskInput);
+        initialState.setStatus(TaskStatus.CREATED);
+        initialState.setIterationCount(0);
+        stateAssembler.saveState(initialState);
+
+        // 2. 异步执行工作流（通过另一个 bean 调用，确保 @Async 代理生效）
+        workflowService.runAsync(taskInput);
+
+        // 3. 立即返回
+        return toTaskDetailResponse(initialState, now);
     }
 
     public CompetitiveAnalysisState getTaskState(String taskId) {

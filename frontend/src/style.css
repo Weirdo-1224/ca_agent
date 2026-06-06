@@ -1,0 +1,10 @@
+/* Global styles for CA Agent frontend */
+body {
+  margin: 0;
+  background-color: #f5f7fa;
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+}
+
+#app {
+  min-height: 100vh;
+}
