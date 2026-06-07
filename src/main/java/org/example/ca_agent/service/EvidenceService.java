@@ -52,7 +52,9 @@ public class EvidenceService {
     }
 
     private List<String> parseJsonList(String json) {
-        if (json == null || json.isBlank()) return Collections.emptyList();
+        if (json == null || json.isBlank()) {
+            return Collections.emptyList();
+        }
         try {
             return JsonUtils.fromJsonList(json, String.class);
         } catch (Exception e) {
@@ -61,7 +63,9 @@ public class EvidenceService {
     }
 
     private <E extends Enum<E>> E parseEnum(Class<E> clazz, String value) {
-        if (value == null || value.isBlank()) return null;
+        if (value == null || value.isBlank()) {
+            return null;
+        }
         try {
             return Enum.valueOf(clazz, value);
         } catch (IllegalArgumentException e) {

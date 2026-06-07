@@ -114,7 +114,9 @@ public class StateAssembler {
             return;
         }
         for (ProductProfileSetDTO.ProductProfile product : profileSet.getProducts()) {
-            if (product.getClaims() == null) continue;
+            if (product.getClaims() == null) {
+                continue;
+            }
             for (org.example.ca_agent.schema.Claim claim : product.getClaims()) {
                 ClaimEntity entity = new ClaimEntity();
                 entity.setClaimId(claim.getClaimId());

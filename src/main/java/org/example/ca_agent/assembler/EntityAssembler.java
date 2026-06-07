@@ -94,7 +94,9 @@ public class EntityAssembler {
     }
 
     private List<Evidence> toEvidenceList(List<EvidenceEntity> entities) {
-        if (entities == null) return Collections.emptyList();
+        if (entities == null) {
+            return Collections.emptyList();
+        }
         return entities.stream().map(e -> {
             Evidence ev = new Evidence();
             ev.setEvidenceId(e.getEvidenceId());
@@ -152,7 +154,9 @@ public class EntityAssembler {
     }
 
     private List<ReviewResultDTO.ReviewIssue> toReviewIssues(List<ReviewIssueEntity> entities) {
-        if (entities == null) return Collections.emptyList();
+        if (entities == null) {
+            return Collections.emptyList();
+        }
         return entities.stream().map(e -> {
             ReviewResultDTO.ReviewIssue issue = new ReviewResultDTO.ReviewIssue();
             issue.setIssueId(e.getIssueId());
@@ -168,7 +172,9 @@ public class EntityAssembler {
     }
 
     private List<RepairInstructionDTO> toRepairInstructions(List<RepairInstructionEntity> entities) {
-        if (entities == null) return Collections.emptyList();
+        if (entities == null) {
+            return Collections.emptyList();
+        }
         return entities.stream().map(e -> {
             RepairInstructionDTO dto = new RepairInstructionDTO();
             dto.setTaskId(e.getTaskId());
@@ -186,7 +192,9 @@ public class EntityAssembler {
     }
 
     private <T> List<T> parseJsonList(String json, Class<T> elementClass) {
-        if (json == null || json.isBlank()) return Collections.emptyList();
+        if (json == null || json.isBlank()) {
+            return Collections.emptyList();
+        }
         try {
             return JsonUtils.fromJsonList(json, elementClass);
         } catch (Exception e) {
@@ -195,7 +203,9 @@ public class EntityAssembler {
     }
 
     private <E extends Enum<E>> E parseEnum(Class<E> clazz, String value) {
-        if (value == null || value.isBlank()) return null;
+        if (value == null || value.isBlank()) {
+            return null;
+        }
         try {
             return Enum.valueOf(clazz, value);
         } catch (IllegalArgumentException e) {

@@ -113,7 +113,9 @@ public class TaskService {
 
     @SuppressWarnings("unchecked")
     private java.util.List<String> parseJsonList(String json) {
-        if (json == null || json.isBlank()) return java.util.Collections.emptyList();
+        if (json == null || json.isBlank()) {
+            return java.util.Collections.emptyList();
+        }
         try {
             return org.example.ca_agent.common.JsonUtils.fromJson(json, java.util.List.class);
         } catch (Exception e) {

@@ -81,7 +81,9 @@ public class ReportService {
     }
 
     private <T> List<T> parseJsonList(String json, Class<T> elementClass) {
-        if (json == null || json.isBlank()) return Collections.emptyList();
+        if (json == null || json.isBlank()) {
+            return Collections.emptyList();
+        }
         try {
             return JsonUtils.fromJsonList(json, elementClass);
         } catch (Exception e) {
@@ -90,7 +92,9 @@ public class ReportService {
     }
 
     private <E extends Enum<E>> E parseEnum(Class<E> clazz, String value) {
-        if (value == null || value.isBlank()) return null;
+        if (value == null || value.isBlank()) {
+            return null;
+        }
         try {
             return Enum.valueOf(clazz, value);
         } catch (IllegalArgumentException e) {

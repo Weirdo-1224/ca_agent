@@ -54,7 +54,9 @@ public class AgentRunService {
     }
 
     private <E extends Enum<E>> E parseEnum(Class<E> clazz, String value) {
-        if (value == null || value.isBlank()) return null;
+        if (value == null || value.isBlank()) {
+            return null;
+        }
         try {
             return Enum.valueOf(clazz, value);
         } catch (IllegalArgumentException e) {
