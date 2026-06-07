@@ -1,24 +1,40 @@
 package org.example.ca_agent.agent;
 
+import org.example.ca_agent.assembler.StateAssembler;
 import org.example.ca_agent.dto.agent.AgentRunTrace;
 import org.example.ca_agent.enums.AgentType;
 import org.example.ca_agent.workflow.CompetitiveAnalysisState;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class AgentRunTracerTest {
 
-    private final AgentRunTracer tracer = new AgentRunTracer();
+    private AgentRunTracer tracer;
+
+    @BeforeEach
+    void setUp() {
+        StateAssembler stateAssembler = mock(StateAssembler.class);
+        tracer = new AgentRunTracer(stateAssembler);
+    }
 
     @Test
     void trace_recordsSuccessAgentRun() {
         CompetitiveAnalysisState state = buildState("task-001");
         AgentNode mockAgent = new AgentNode() {
-            @Override public AgentType getAgentType() { return AgentType.PLANNER_AGENT; }
-            @Override public CompetitiveAnalysisState execute(CompetitiveAnalysisState s) { return s; }
+            @Override
+            public AgentType getAgentType() {
+                return AgentType.PLANNER_AGENT;
+            }
+
+            @Override
+            public CompetitiveAnalysisState execute(CompetitiveAnalysisState s) {
+                return s;
+            }
         };
 
         tracer.trace(mockAgent, state);
@@ -43,8 +59,13 @@ class AgentRunTracerTest {
         CompetitiveAnalysisState state = buildState("task-002");
         RuntimeException expectedError = new RuntimeException("Agent crashed");
         AgentNode failingAgent = new AgentNode() {
-            @Override public AgentType getAgentType() { return AgentType.COLLECTOR_AGENT; }
-            @Override public CompetitiveAnalysisState execute(CompetitiveAnalysisState s) {
+            @Override
+            public AgentType getAgentType() {
+                return AgentType.COLLECTOR_AGENT;
+            }
+
+            @Override
+            public CompetitiveAnalysisState execute(CompetitiveAnalysisState s) {
                 throw expectedError;
             }
         };
@@ -65,8 +86,15 @@ class AgentRunTracerTest {
     void trace_generatesUniqueRunIdPerExecution() {
         CompetitiveAnalysisState state = buildState("task-003");
         AgentNode mockAgent = new AgentNode() {
-            @Override public AgentType getAgentType() { return AgentType.WRITER_AGENT; }
-            @Override public CompetitiveAnalysisState execute(CompetitiveAnalysisState s) { return s; }
+            @Override
+            public AgentType getAgentType() {
+                return AgentType.WRITER_AGENT;
+            }
+
+            @Override
+            public CompetitiveAnalysisState execute(CompetitiveAnalysisState s) {
+                return s;
+            }
         };
 
         tracer.trace(mockAgent, state);
@@ -123,16 +151,19 @@ class AgentRunTracerTest {
     void trace_preservesExceptionType() {
         CompetitiveAnalysisState state = buildState("task-006");
         AgentNode agent = new AgentNode() {
-            @Override public AgentType getAgentType() { return AgentType.ANALYZER_AGENT; }
-            @Override public CompetitiveAnalysisState execute(CompetitiveAnalysisState s) {
+            @Override
+            public AgentType getAgentType() {
+                return AgentType.ANALYZER_AGENT;
+            }
+
+            @Override
+            public CompetitiveAnalysisState execute(CompetitiveAnalysisState s) {
                 throw new IllegalStateException("Invalid state");
             }
         };
 
         assertThrows(IllegalStateException.class, () -> tracer.trace(agent, state));
     }
-
-    // ---------- 辅助方法 ----------
 
     private CompetitiveAnalysisState buildState(String taskId) {
         CompetitiveAnalysisState state = new CompetitiveAnalysisState();
@@ -144,8 +175,15 @@ class AgentRunTracerTest {
 
     private AgentNode createAgent(AgentType type) {
         return new AgentNode() {
-            @Override public AgentType getAgentType() { return type; }
-            @Override public CompetitiveAnalysisState execute(CompetitiveAnalysisState s) { return s; }
+            @Override
+            public AgentType getAgentType() {
+                return type;
+            }
+
+            @Override
+            public CompetitiveAnalysisState execute(CompetitiveAnalysisState s) {
+                return s;
+            }
         };
     }
 }

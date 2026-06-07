@@ -1,0 +1,10 @@
+export function formatTime(t?: string): string {
+  if (!t) return '—';
+  return new Date(t).toLocaleString('zh-CN');
+}
+
+export function formatDuration(ms?: number): string {
+  if (ms == null) return '—';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}

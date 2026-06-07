@@ -1,86 +1,138 @@
 <template>
-  <div v-if="detail" class="overview">
-    <el-row :gutter="20">
-      <el-col :xs="24" :md="12">
-        <el-card shadow="never">
-          <template #header>任务信息</template>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="任务名称">{{ detail.taskName }}</el-descriptions-item>
-            <el-descriptions-item label="领域">{{ detail.domain }}</el-descriptions-item>
-            <el-descriptions-item label="目标产品">
-              <el-tag v-for="p in detail.targetProducts" :key="p" size="small" class="product-tag">{{ p }}</el-tag>
-            </el-descriptions-item>
-            <el-descriptions-item label="分析目标">{{ detail.analysisGoal }}</el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :md="12">
-        <el-card shadow="never">
-          <template #header>执行状态</template>
-          <el-descriptions :column="1" border>
-            <el-descriptions-item label="状态">
-              <StatusTag :status="detail.status" />
-            </el-descriptions-item>
-            <el-descriptions-item label="迭代次数">{{ detail.iterationCount }} / {{ detail.maxIterations }}</el-descriptions-item>
-            <el-descriptions-item label="创建时间">{{ formatTime(detail.createdAt) }}</el-descriptions-item>
-            <el-descriptions-item label="更新时间">{{ formatTime(detail.updatedAt) }}</el-descriptions-item>
-          </el-descriptions>
-        </el-card>
-      </el-col>
-    </el-row>
+  <div class="overview-tab">
+    <!-- 任务摘要 -->
+    <el-card shadow="never" class="section-card">
+      <template #header><span class="section-title">任务摘要</span></template>
+      <el-descriptions :column="2" size="small" border>
+        <el-descriptions-item label="任务名称">{{ task?.taskName }}</el-descriptions-item>
+        <el-descriptions-item label="领域">{{ task?.domain }}</el-descriptions-item>
+        <el-descriptions-item label="目标产品">
+          <el-tag v-for="p in task?.targetProducts" :key="p" size="small" style="margin-right:4px">{{ p }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="分析目标">{{ task?.analysisGoal }}</el-descriptions-item>
+      </el-descriptions>
+    </el-card>
 
-    <el-row :gutter="20" class="mt-20">
-      <el-col :xs="24" :md="12">
-        <el-card shadow="never">
-          <template #header>质检结果</template>
-          <div v-if="review">
-            <p><strong>通过状态：</strong><el-tag :type="review.passed ? 'success' : 'danger'">{{ review.passed ? '通过' : '未通过' }}</el-tag></p>
-            <p v-if="review.score !== null"><strong>得分：</strong>{{ review.score }}</p>
-            <p v-if="review.summary"><strong>摘要：</strong>{{ review.summary }}</p>
-          </div>
-          <el-empty v-else description="质检尚未完成" />
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :md="12">
-        <el-card shadow="never">
-          <template #header>Agent 执行统计</template>
-          <div v-if="agentRuns.length">
-            <p><strong>总执行数：</strong>{{ agentRuns.length }}</p>
-            <p><strong>成功：</strong>{{ successCount }}</p>
-            <p><strong>失败：</strong>{{ failCount }}</p>
-            <p><strong>总耗时：</strong>{{ totalDuration }} ms</p>
-          </div>
-          <el-empty v-else description="暂无执行记录" />
-        </el-card>
-      </el-col>
-    </el-row>
+    <!-- 执行摘要 -->
+    <el-card shadow="never" class="section-card">
+      <template #header><span class="section-title">执行摘要</span></template>
+      <el-descriptions :column="2" size="small" border>
+        <el-descriptions-item label="当前状态">
+          <el-tag :type="statusTagType" size="small">{{ statusText }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="当前阶段">{{ currentAgent }}</el-descriptions-item>
+        <el-descriptions-item label="修复轮次">{{ task?.iterationCount }} / {{ task?.maxIterations }}</el-descriptions-item>
+        <el-descriptions-item label="Agent 执行次数">{{ agentRuns.length }}</el-descriptions-item>
+        <el-descriptions-item label="成功数">{{ successCount }}</el-descriptions-item>
+        <el-descriptions-item label="失败数">{{ failedCount }}</el-descriptions-item>
+        <el-descriptions-item label="总耗时">{{ totalDuration }}</el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+
+    <!-- 质量摘要 -->
+    <el-card shadow="never" class="section-card">
+      <template #header><span class="section-title">质量摘要</span></template>
+      <template v-if="review">
+        <el-descriptions :column="2" size="small" border>
+          <el-descriptions-item label="质检结果">
+            <el-tag :type="review.passed ? 'success' : 'warning'" size="small">
+              {{ review.passed ? '通过' : '未通过' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="评分">{{ review.score ?? '—' }}</el-descriptions-item>
+          <el-descriptions-item :span="2" label="摘要">{{ review.summary || '—' }}</el-descriptions-item>
+          <el-descriptions-item v-if="review.nextAction" :span="2" label="下一步">
+            {{ review.nextAction.action }} → {{ review.nextAction.targetAgent }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </template>
+      <el-empty v-else :image-size="60" :description="isRunning ? '质检尚未完成' : '暂无质检结果'" />
+    </el-card>
+
+    <!-- 关键产物统计 -->
+    <el-card shadow="never" class="section-card">
+      <template #header><span class="section-title">关键产物统计</span></template>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value">{{ report?.sections?.length ?? 0 }}</div>
+          <div class="stat-label">报告章节</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{ evidence.length }}</div>
+          <div class="stat-label">证据数量</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{ review?.issues?.length ?? 0 }}</div>
+          <div class="stat-label">质检问题</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">{{ agentRuns.length }}</div>
+          <div class="stat-label">Agent 执行数</div>
+        </div>
+      </div>
+    </el-card>
   </div>
-  <el-empty v-else description="任务不存在或加载失败" />
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { TaskDetailResponse, ReviewResult, AgentRunResponse } from '@/types';
-import StatusTag from './StatusTag.vue';
+import type { TaskDetailResponse, AgentRunResponse, ReportResponse, Evidence, ReviewResult } from '@/types';
+import { getStatusTagType, getStatusText, getCurrentAgentByStatus, isRunningStatus } from '@/utils/status';
+import { formatDuration } from '@/utils/time';
 
 const props = defineProps<{
-  detail: TaskDetailResponse | null;
-  review: ReviewResult | null;
+  task: TaskDetailResponse | null;
   agentRuns: AgentRunResponse[];
+  report: ReportResponse | null;
+  evidence: Evidence[];
+  review: ReviewResult | null;
 }>();
 
-const successCount = computed(() => props.agentRuns.filter((a) => a.status === 'SUCCESS').length);
-const failCount = computed(() => props.agentRuns.filter((a) => a.status === 'FAILED').length);
-const totalDuration = computed(() => props.agentRuns.reduce((sum, a) => sum + (a.durationMs || 0), 0));
+const statusTagType = computed(() => getStatusTagType(props.task?.status));
+const statusText = computed(() => getStatusText(props.task?.status));
+const currentAgent = computed(() => getCurrentAgentByStatus(props.task?.status));
+const isRunning = computed(() => isRunningStatus(props.task?.status));
 
-function formatTime(t?: string) {
-  if (!t) return '-';
-  return new Date(t).toLocaleString('zh-CN');
-}
+const successCount = computed(() => props.agentRuns.filter((r) => r.status === 'SUCCESS').length);
+const failedCount = computed(() => props.agentRuns.filter((r) => r.status !== 'SUCCESS').length);
+const totalDuration = computed(() => {
+  const total = props.agentRuns.reduce((sum, r) => sum + (r.durationMs || 0), 0);
+  return formatDuration(total || undefined);
+});
 </script>
 
 <style scoped>
-.overview { padding: 8px 0; }
-.product-tag { margin-right: 6px; }
-.mt-20 { margin-top: 20px; }
+.overview-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.section-card {
+  border-radius: 6px;
+}
+.section-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  text-align: center;
+}
+.stat-item {
+  padding: 16px 8px;
+  border-radius: 6px;
+  background: #f5f7fa;
+}
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #303133;
+}
+.stat-label {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+}
 </style>

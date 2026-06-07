@@ -1,108 +1,220 @@
 <template>
-  <div class="detail-page">
-    <el-page-header @back="router.back()" :title="detail?.taskName || '任务详情'" />
+  <div class="detail-page" v-loading="pageLoading">
+    <!-- 404 / 错误 -->
+    <div v-if="pageError" class="page-error">
+      <el-empty :description="pageError">
+        <el-button type="primary" @click="$router.push('/')">返回创建页</el-button>
+      </el-empty>
+    </div>
 
-    <el-tabs v-model="activeTab" class="detail-tabs">
-      <el-tab-pane label="概览" name="overview">
-        <OverviewTab :detail="detail" :review="review" :agentRuns="agentRuns" />
-      </el-tab-pane>
-      <el-tab-pane label="报告" name="report">
-        <ReportTab :report="report" :status="detail?.status" />
-      </el-tab-pane>
-      <el-tab-pane label="证据" name="evidence">
-        <EvidenceTab :evidence="evidence" />
-      </el-tab-pane>
-      <el-tab-pane label="质检" name="review">
-        <ReviewTab :review="review" :status="detail?.status" />
-      </el-tab-pane>
-      <el-tab-pane label="Agent 轨迹" name="agents">
-        <AgentRunsTab :agentRuns="agentRuns" />
-      </el-tab-pane>
-    </el-tabs>
+    <template v-else-if="task">
+      <!-- 顶部状态区 -->
+      <TaskStatusHeader
+        :detail="task"
+        :loading="refreshing"
+        @refresh="refreshAll"
+        @back="$router.push('/')"
+      />
+
+      <!-- 主体：左侧工作流 + 右侧内容 -->
+      <div class="detail-body">
+        <aside class="detail-aside">
+          <AgentWorkflowPanel :status="task.status" :agent-runs="agentRuns" />
+        </aside>
+
+        <main class="detail-main">
+          <el-tabs v-model="activeTab" type="border-card">
+            <el-tab-pane label="概览" name="overview">
+              <OverviewTab :task="task" :agent-runs="agentRuns" :report="report" :evidence="evidence" :review="review" />
+            </el-tab-pane>
+            <el-tab-pane label="报告" name="report">
+              <ReportTab :report="report" :task-status="task.status" @search-evidence="searchEvidence" />
+            </el-tab-pane>
+            <el-tab-pane label="证据" name="evidence">
+              <EvidenceTab :evidence="evidence" :report="report" :task-status="task.status" ref="evidenceTabRef" />
+            </el-tab-pane>
+            <el-tab-pane label="质检" name="review">
+              <ReviewTab :review="review" :task-status="task.status" />
+            </el-tab-pane>
+            <el-tab-pane label="Agent 轨迹" name="runs">
+              <AgentRunsTab :agent-runs="agentRuns" />
+            </el-tab-pane>
+          </el-tabs>
+        </main>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { getTaskDetail, getReport, getEvidence, getReview, getAgentRuns } from '@/api/tasks';
+import { isTerminalStatus, isRunningStatus } from '@/utils/status';
 import type { TaskDetailResponse, ReportResponse, Evidence, ReviewResult, AgentRunResponse } from '@/types';
+
+import TaskStatusHeader from '@/components/TaskStatusHeader.vue';
+import AgentWorkflowPanel from '@/components/AgentWorkflowPanel.vue';
 import OverviewTab from '@/components/OverviewTab.vue';
 import ReportTab from '@/components/ReportTab.vue';
 import EvidenceTab from '@/components/EvidenceTab.vue';
 import ReviewTab from '@/components/ReviewTab.vue';
 import AgentRunsTab from '@/components/AgentRunsTab.vue';
 
-const props = defineProps<{ taskId: string }>();
+const route = useRoute();
 const router = useRouter();
+const taskId = route.params.taskId as string;
 
+const pageLoading = ref(true);
+const pageError = ref('');
+const refreshing = ref(false);
 const activeTab = ref('overview');
-const detail = ref<TaskDetailResponse | null>(null);
+
+const task = ref<TaskDetailResponse | null>(null);
+const agentRuns = ref<AgentRunResponse[]>([]);
 const report = ref<ReportResponse | null>(null);
 const evidence = ref<Evidence[]>([]);
 const review = ref<ReviewResult | null>(null);
-const agentRuns = ref<AgentRunResponse[]>([]);
-const pollingTimer = ref<ReturnType<typeof setInterval> | null>(null);
 
-const RUNNING_STATUSES = new Set([
-  'CREATED', 'PLANNING', 'COLLECTING', 'EXTRACTING',
-  'ANALYZING', 'WRITING', 'REVIEWING', 'REPAIRING',
-]);
+const evidenceTabRef = ref<InstanceType<typeof EvidenceTab> | null>(null);
 
+// --- Polling timers ---
+let taskTimer: ReturnType<typeof setInterval> | null = null;
+let runsTimer: ReturnType<typeof setInterval> | null = null;
+let evidenceTimer: ReturnType<typeof setInterval> | null = null;
 
-
-function isRunning(status?: string) {
-  return status ? RUNNING_STATUSES.has(status) : false;
-}
-
-async function fetchAll() {
+async function loadTask() {
   try {
-    const [d, r, e, rev, ar] = await Promise.all([
-      getTaskDetail(props.taskId),
-      getReport(props.taskId).catch(() => null),
-      getEvidence(props.taskId).catch(() => []),
-      getReview(props.taskId).catch(() => null),
-      getAgentRuns(props.taskId).catch(() => []),
-    ]);
-    detail.value = d;
-    report.value = r;
-    evidence.value = e;
-    review.value = rev;
-    agentRuns.value = ar;
-
-    if (!isRunning(d.status) && pollingTimer.value) {
-      clearInterval(pollingTimer.value);
-      pollingTimer.value = null;
-    }
+    task.value = await getTaskDetail(taskId);
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : '加载失败';
-    if (msg.includes('not found') || msg.includes('404')) {
-      detail.value = null;
+    if (!task.value) {
+      pageError.value = e instanceof Error ? e.message : '任务不存在或加载失败';
     }
   }
 }
 
-onMounted(() => {
-  fetchAll();
-  pollingTimer.value = setInterval(() => {
-    if (detail.value && isRunning(detail.value.status)) {
-      fetchAll();
-    }
+async function loadAgentRuns() {
+  try {
+    agentRuns.value = await getAgentRuns(taskId);
+  } catch { /* silent */ }
+}
+
+async function loadReport() {
+  try {
+    report.value = await getReport(taskId);
+  } catch { /* silent */ }
+}
+
+async function loadEvidence() {
+  try {
+    evidence.value = await getEvidence(taskId);
+  } catch { /* silent */ }
+}
+
+async function loadReview() {
+  try {
+    review.value = await getReview(taskId);
+  } catch { /* silent */ }
+}
+
+async function refreshAll() {
+  refreshing.value = true;
+  await Promise.all([loadTask(), loadAgentRuns(), loadReport(), loadEvidence(), loadReview()]);
+  refreshing.value = false;
+}
+
+async function initialLoad() {
+  pageLoading.value = true;
+  pageError.value = '';
+  await loadTask();
+  if (!pageError.value) {
+    await Promise.all([loadAgentRuns(), loadReport(), loadEvidence(), loadReview()]);
+  }
+  pageLoading.value = false;
+}
+
+function startPolling() {
+  stopPolling();
+  // Poll task + agent-runs every 3s
+  taskTimer = setInterval(async () => {
+    await loadTask();
+    await loadAgentRuns();
   }, 3000);
+  // Poll evidence every 6s
+  evidenceTimer = setInterval(() => {
+    loadEvidence();
+  }, 6000);
+}
+
+function stopPolling() {
+  if (taskTimer) { clearInterval(taskTimer); taskTimer = null; }
+  if (runsTimer) { clearInterval(runsTimer); runsTimer = null; }
+  if (evidenceTimer) { clearInterval(evidenceTimer); evidenceTimer = null; }
+}
+
+// Watch task status changes
+watch(() => task.value?.status, (newStatus, oldStatus) => {
+  if (!newStatus) return;
+
+  // When entering WRITING/REVIEWING/REPAIRING or terminal, also load report & review
+  const loadReportStages = ['WRITING', 'REVIEWING', 'REPAIRING'];
+  if (loadReportStages.includes(newStatus) || isTerminalStatus(newStatus)) {
+    loadReport();
+    loadReview();
+  }
+
+  // When entering terminal state, stop polling & do final refresh
+  if (isTerminalStatus(newStatus) && !isTerminalStatus(oldStatus)) {
+    stopPolling();
+    refreshAll();
+  }
+});
+
+function searchEvidence(evidenceId: string) {
+  activeTab.value = 'evidence';
+  // Next tick to allow tab switch, then trigger search
+  setTimeout(() => {
+    evidenceTabRef.value?.setSearchKeyword(evidenceId);
+  }, 100);
+}
+
+onMounted(async () => {
+  await initialLoad();
+  if (task.value && isRunningStatus(task.value.status)) {
+    startPolling();
+  }
 });
 
 onUnmounted(() => {
-  if (pollingTimer.value) clearInterval(pollingTimer.value);
+  stopPolling();
 });
 </script>
 
 <style scoped>
 .detail-page {
-  max-width: 1200px;
-  margin: 20px auto;
-  padding: 0 16px;
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
-.detail-tabs {
-  margin-top: 20px;
+.page-error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+.detail-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.detail-aside {
+  width: 260px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 16px;
+}
+.detail-main {
+  flex: 1;
+  min-width: 0;
 }
 </style>

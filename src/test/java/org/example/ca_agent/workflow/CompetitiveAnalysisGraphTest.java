@@ -16,12 +16,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import org.example.ca_agent.assembler.StateAssembler;
 
 class CompetitiveAnalysisGraphTest {
 
-    @Test
-    void runMockDemoRepairsAfterFirstReviewAndCompletes() {
-        CompetitiveAnalysisGraph graph = new CompetitiveAnalysisGraph(
+    private CompetitiveAnalysisGraph createGraph() {
+        StateAssembler stateAssembler = mock(StateAssembler.class);
+        AgentRunTracer agentRunTracer = new AgentRunTracer(stateAssembler);
+
+        return new CompetitiveAnalysisGraph(
                 new PlannerAgent(),
                 new CollectorAgent(),
                 new ExtractorAgent(),
@@ -30,8 +34,12 @@ class CompetitiveAnalysisGraphTest {
                 new ReviewerAgent(),
                 new WorkflowRouter(new RepairRouter()),
                 new RepairRouter(),
-                new AgentRunTracer()
-        );
+                agentRunTracer);
+    }
+
+    @Test
+    void runMockDemoRepairsAfterFirstReviewAndCompletes() {
+        CompetitiveAnalysisGraph graph = createGraph();
 
         CompetitiveAnalysisState state = graph.runMockDemo();
 
@@ -49,17 +57,7 @@ class CompetitiveAnalysisGraphTest {
 
     @Test
     void repairRouterBuildsSupplementEvidenceInstructionForMissingEvidence() {
-        CompetitiveAnalysisGraph graph = new CompetitiveAnalysisGraph(
-                new PlannerAgent(),
-                new CollectorAgent(),
-                new ExtractorAgent(),
-                new AnalyzerAgent(),
-                new WriterAgent(),
-                new ReviewerAgent(),
-                new WorkflowRouter(new RepairRouter()),
-                new RepairRouter(),
-                new AgentRunTracer()
-        );
+        CompetitiveAnalysisGraph graph = createGraph();
 
         CompetitiveAnalysisState state = graph.runMockDemo();
 

@@ -1,83 +1,134 @@
 <template>
-  <div v-if="review" class="review-tab">
-    <el-card shadow="never" class="review-summary">
-      <el-row :gutter="20">
-        <el-col :xs="24" :sm="8">
-          <div class="summary-item">
-            <div class="label">质检结果</div>
-            <el-tag :type="review.passed ? 'success' : 'danger'" size="large">
+  <div class="review-tab">
+    <template v-if="review">
+      <!-- 质检总览 -->
+      <el-card shadow="never" class="review-card">
+        <template #header><span class="section-title">质检总览</span></template>
+        <el-descriptions :column="2" size="small" border>
+          <el-descriptions-item label="质检结果">
+            <el-tag :type="review.passed ? 'success' : 'danger'" effect="dark" size="small">
               {{ review.passed ? '通过' : '未通过' }}
             </el-tag>
-          </div>
-        </el-col>
-        <el-col :xs="24" :sm="8">
-          <div class="summary-item">
-            <div class="label">质检得分</div>
-            <div class="score">{{ review.score ?? '-' }}</div>
-          </div>
-        </el-col>
-        <el-col :xs="24" :sm="8">
-          <div class="summary-item">
-            <div class="label">下一步</div>
-            <div v-if="review.nextAction">
-              <el-tag size="small">{{ review.nextAction.action }}</el-tag>
-              <div class="reason">{{ review.nextAction.reason }}</div>
+          </el-descriptions-item>
+          <el-descriptions-item label="评分">
+            <span class="score">{{ review.score ?? '—' }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item :span="2" label="摘要">{{ review.summary || '—' }}</el-descriptions-item>
+        </el-descriptions>
+      </el-card>
+
+      <!-- 下一步动作 -->
+      <el-card v-if="review.nextAction" shadow="never" class="review-card next-action-card" :class="{ 'action-warning': !review.passed }">
+        <template #header><span class="section-title">下一步动作</span></template>
+        <div class="action-content">
+          <div class="action-main">
+            <el-icon :size="20"><Warning /></el-icon>
+            <div class="action-text">
+              <template v-if="taskStatus === 'WAITING_HUMAN_REVIEW'">
+                已达到最大自动修复轮次，等待人工审核。
+              </template>
+              <template v-else>
+                Reviewer 判定当前报告未通过，系统将根据修复建议回退到 <strong>{{ review.nextAction.targetAgent }}</strong>。
+              </template>
             </div>
-            <div v-else>-</div>
           </div>
-        </el-col>
-      </el-row>
-      <div v-if="review.summary" class="review-summary-text">
-        <strong>摘要：</strong>{{ review.summary }}
-      </div>
-    </el-card>
+          <el-descriptions :column="1" size="small" border style="margin-top:12px">
+            <el-descriptions-item label="动作">{{ review.nextAction.action }}</el-descriptions-item>
+            <el-descriptions-item label="目标 Agent">{{ review.nextAction.targetAgent }}</el-descriptions-item>
+            <el-descriptions-item label="原因">{{ review.nextAction.reason }}</el-descriptions-item>
+          </el-descriptions>
+        </div>
+      </el-card>
 
-    <h4 v-if="review.issues?.length">问题列表 ({{ review.issues.length }})</h4>
-    <el-empty v-else-if="review.passed" description="质检通过，未发现阻塞问题" />
-
-    <el-table v-if="review.issues?.length" :data="review.issues" stripe border>
-      <el-table-column prop="issueId" label="ID" width="100" />
-      <el-table-column prop="severity" label="严重度" width="100">
-        <template #default="{ row }">
-          <el-tag :type="severityType(row.severity)" size="small">{{ row.severity }}</el-tag>
+      <!-- issues 表格 -->
+      <el-card shadow="never" class="review-card">
+        <template #header><span class="section-title">问题列表</span></template>
+        <template v-if="review.issues && review.issues.length > 0">
+          <el-table :data="review.issues" stripe size="small">
+            <el-table-column prop="severity" label="严重程度" width="90">
+              <template #default="{ row }">
+                <el-tag :type="severityType(row.severity)" size="small">{{ row.severity }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="type" label="类型" width="120" />
+            <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
+            <el-table-column prop="targetAgent" label="目标 Agent" width="130" />
+            <el-table-column prop="targetProduct" label="目标产品" width="100" />
+            <el-table-column prop="targetDimension" label="目标维度" width="100" />
+            <el-table-column prop="repairInstruction" label="修复建议" min-width="180" show-overflow-tooltip />
+          </el-table>
         </template>
-      </el-table-column>
-      <el-table-column prop="type" label="类型" width="160" />
-      <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
-      <el-table-column prop="targetAgent" label="目标 Agent" width="140" />
-      <el-table-column prop="targetProduct" label="目标产品" width="120" />
-      <el-table-column prop="repairInstruction" label="修复建议" min-width="150" show-overflow-tooltip />
-    </el-table>
+        <el-empty v-else :image-size="50" description="质检通过，未发现阻塞问题。" />
+      </el-card>
+    </template>
+
+    <!-- 空状态 -->
+    <el-empty v-else :image-size="80" :description="emptyText" />
   </div>
-  <el-empty v-else :description="isRunning(status) ? '质检尚未完成' : '暂无质检结果'" />
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+import { Warning } from '@element-plus/icons-vue';
 import type { ReviewResult } from '@/types';
+import { isRunningStatus } from '@/utils/status';
 
-defineProps<{
+const props = defineProps<{
   review: ReviewResult | null;
-  status?: string;
+  taskStatus?: string;
 }>();
 
-const RUNNING = new Set(['CREATED', 'PLANNING', 'COLLECTING', 'EXTRACTING', 'ANALYZING', 'WRITING', 'REVIEWING', 'REPAIRING']);
-function isRunning(s?: string) {
-  return s ? RUNNING.has(s) : false;
+function severityType(severity: string) {
+  switch (severity?.toUpperCase()) {
+    case 'HIGH':
+    case 'CRITICAL':
+      return 'danger';
+    case 'MEDIUM':
+      return 'warning';
+    default:
+      return 'info';
+  }
 }
 
-function severityType(s: string) {
-  if (s === 'HIGH') return 'danger';
-  if (s === 'MEDIUM') return 'warning';
-  return 'info';
-}
+const emptyText = computed(() => {
+  if (isRunningStatus(props.taskStatus)) return '质检尚未完成';
+  return '暂无质检结果';
+});
 </script>
 
 <style scoped>
-.review-tab { padding: 8px 0; }
-.review-summary { margin-bottom: 20px; }
-.summary-item { text-align: center; padding: 8px 0; }
-.label { color: #999; font-size: 13px; margin-bottom: 6px; }
-.score { font-size: 24px; font-weight: bold; color: #333; }
-.reason { font-size: 12px; color: #666; margin-top: 4px; }
-.review-summary-text { margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee; }
+.review-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.review-card {
+  border-radius: 6px;
+}
+.section-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.score {
+  font-size: 18px;
+  font-weight: 700;
+  color: #303133;
+}
+.next-action-card.action-warning {
+  border-color: #e6a23c;
+}
+.action-content {
+  padding: 4px 0;
+}
+.action-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #e6a23c;
+}
+.action-text {
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.6;
+}
 </style>
