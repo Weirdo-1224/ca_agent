@@ -20,9 +20,11 @@ import org.example.ca_agent.prompt.WriterPrompt;
 import org.example.ca_agent.schema.Claim;
 import org.example.ca_agent.schema.Evidence;
 import org.example.ca_agent.service.AgentOutputValidator;
+import org.example.ca_agent.service.LlmCallTraceCollector;
 import org.example.ca_agent.service.LlmChatService;
 import org.example.ca_agent.service.ModelChatGateway;
 import org.example.ca_agent.service.StructuredLlmService;
+import org.example.ca_agent.service.TokenUsageAccumulator;
 import org.example.ca_agent.workflow.CompetitiveAnalysisState;
 import org.junit.jupiter.api.Test;
 
@@ -39,7 +41,7 @@ class RealPromptAgentTest {
         RecordingGateway gateway = new RecordingGateway(JsonUtils.toJson(validPlan("model-task")));
         PlannerAgent agent = new PlannerAgent(
                 llmMode(),
-                new StructuredLlmService(new LlmChatService(gateway)),
+                new StructuredLlmService(new LlmChatService(gateway, new TokenUsageAccumulator(), new LlmCallTraceCollector())),
                 new PlannerPrompt(),
                 new AgentOutputValidator()
         );
@@ -61,7 +63,7 @@ class RealPromptAgentTest {
         RecordingGateway gateway = new RecordingGateway(JsonUtils.toJson(validProfileSet("model-task")));
         ExtractorAgent agent = new ExtractorAgent(
                 llmMode(),
-                new StructuredLlmService(new LlmChatService(gateway)),
+                new StructuredLlmService(new LlmChatService(gateway, new TokenUsageAccumulator(), new LlmCallTraceCollector())),
                 new ExtractorPrompt(),
                 new AgentOutputValidator()
         );
@@ -85,7 +87,7 @@ class RealPromptAgentTest {
         RecordingGateway gateway = new RecordingGateway(JsonUtils.toJson(validAnalysis("model-task")));
         AnalyzerAgent agent = new AnalyzerAgent(
                 llmMode(),
-                new StructuredLlmService(new LlmChatService(gateway)),
+                new StructuredLlmService(new LlmChatService(gateway, new TokenUsageAccumulator(), new LlmCallTraceCollector())),
                 new AnalyzerPrompt(),
                 new AgentOutputValidator()
         );
@@ -111,7 +113,7 @@ class RealPromptAgentTest {
         RecordingGateway gateway = new RecordingGateway(JsonUtils.toJson(validReport("model-task")));
         WriterAgent agent = new WriterAgent(
                 llmMode(),
-                new StructuredLlmService(new LlmChatService(gateway)),
+                new StructuredLlmService(new LlmChatService(gateway, new TokenUsageAccumulator(), new LlmCallTraceCollector())),
                 new WriterPrompt(),
                 new AgentOutputValidator()
         );
@@ -276,7 +278,7 @@ class RealPromptAgentTest {
     private ReviewerAgent reviewerAgent(RecordingGateway gateway) {
         return new ReviewerAgent(
                 llmMode(),
-                new StructuredLlmService(new LlmChatService(gateway)),
+                new StructuredLlmService(new LlmChatService(gateway, new TokenUsageAccumulator(), new LlmCallTraceCollector())),
                 new ReviewerPrompt(),
                 new AgentOutputValidator()
         );
@@ -318,10 +320,10 @@ class RealPromptAgentTest {
         }
 
         @Override
-        public String call(String systemPrompt, String userPrompt) {
+        public org.example.ca_agent.dto.agent.LlmCallResult call(String systemPrompt, String userPrompt) {
             this.systemPrompt = systemPrompt;
             this.userPrompt = userPrompt;
-            return response;
+            return org.example.ca_agent.dto.agent.LlmCallResult.ofContent(response);
         }
     }
 }

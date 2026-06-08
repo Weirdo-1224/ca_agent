@@ -18,12 +18,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import org.example.ca_agent.assembler.StateAssembler;
+import org.example.ca_agent.service.LlmCallTraceCollector;
+import org.example.ca_agent.service.TokenUsageAccumulator;
 
 class CompetitiveAnalysisGraphTest {
 
     private CompetitiveAnalysisGraph createGraph() {
         StateAssembler stateAssembler = mock(StateAssembler.class);
-        AgentRunTracer agentRunTracer = new AgentRunTracer(stateAssembler);
+        AgentRunTracer agentRunTracer = new AgentRunTracer(stateAssembler, new TokenUsageAccumulator(), new LlmCallTraceCollector());
 
         return new CompetitiveAnalysisGraph(
                 new PlannerAgent(),

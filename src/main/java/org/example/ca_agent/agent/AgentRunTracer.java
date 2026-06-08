@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.example.ca_agent.assembler.StateAssembler;
 import org.example.ca_agent.dto.agent.AgentRunTrace;
 import org.example.ca_agent.enums.AgentType;
+import org.example.ca_agent.service.LlmCallTraceCollector;
+import org.example.ca_agent.service.TokenUsageAccumulator;
 import org.example.ca_agent.workflow.CompetitiveAnalysisState;
 import org.springframework.stereotype.Component;
 
@@ -19,9 +21,11 @@ import java.util.UUID;
 public class AgentRunTracer {
 
     private final StateAssembler stateAssembler;
+    private final TokenUsageAccumulator tokenUsageAccumulator;
+    private final LlmCallTraceCollector llmCallTraceCollector;
 
     /**
-     * 追踪 Agent 执行全过程，记录 start/end/duration 和状态。
+     * 追踪 Agent 执行全过程，记录 start/end/duration/token 和状态。
      * 每个 Agent 执行后实时保存中间状态到数据库，支持前端轮询进度。
      */
     public void trace(AgentNode agent, CompetitiveAnalysisState state) {
@@ -30,19 +34,39 @@ public class AgentRunTracer {
         LocalDateTime startTime = LocalDateTime.now();
         long startMs = System.currentTimeMillis();
 
+        // Reset token accumulator and call trace collector before agent execution
+        tokenUsageAccumulator.reset();
+        llmCallTraceCollector.reset();
+
         try {
             agent.execute(state);
             long durationMs = System.currentTimeMillis() - startMs;
-            record(state, buildSuccessTrace(runId, taskId, agent.getAgentType(), startTime, durationMs));
+            AgentRunTrace trace = buildSuccessTrace(runId, taskId, agent.getAgentType(), startTime, durationMs);
+            attachTokenUsage(trace);
+            attachLlmCalls(trace);
+            record(state, trace);
             // 实时保存中间状态
             stateAssembler.saveState(state);
         } catch (Exception e) {
             long durationMs = System.currentTimeMillis() - startMs;
-            record(state, buildFailureTrace(runId, taskId, agent.getAgentType(), startTime, durationMs, e));
+            AgentRunTrace trace = buildFailureTrace(runId, taskId, agent.getAgentType(), startTime, durationMs, e);
+            attachTokenUsage(trace);
+            attachLlmCalls(trace);
+            record(state, trace);
             // 失败时也保存状态
             stateAssembler.saveState(state);
             throw e;
         }
+    }
+
+    private void attachTokenUsage(AgentRunTrace trace) {
+        trace.setPromptTokens(tokenUsageAccumulator.getPromptTokens());
+        trace.setCompletionTokens(tokenUsageAccumulator.getCompletionTokens());
+        trace.setTotalTokens(tokenUsageAccumulator.getTotalTokens());
+    }
+
+    private void attachLlmCalls(AgentRunTrace trace) {
+        trace.setLlmCalls(llmCallTraceCollector.harvest());
     }
 
     private void record(CompetitiveAnalysisState state, AgentRunTrace trace) {

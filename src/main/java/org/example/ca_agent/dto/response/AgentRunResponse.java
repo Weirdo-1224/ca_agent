@@ -1,9 +1,11 @@
 package org.example.ca_agent.dto.response;
 
 import lombok.Data;
+import org.example.ca_agent.dto.agent.LlmCallRecord;
 import org.example.ca_agent.enums.AgentType;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class AgentRunResponse {
@@ -18,4 +20,8 @@ public class AgentRunResponse {
     private LocalDateTime endTime;
     private Long durationMs;
     private String errorMessage;
+    private Integer promptTokens;
+    private Integer completionTokens;
+    private Integer totalTokens;
+    private List<LlmCallRecord> llmCalls;
 }

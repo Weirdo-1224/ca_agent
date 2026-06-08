@@ -3,6 +3,8 @@ package org.example.ca_agent.agent;
 import org.example.ca_agent.assembler.StateAssembler;
 import org.example.ca_agent.dto.agent.AgentRunTrace;
 import org.example.ca_agent.enums.AgentType;
+import org.example.ca_agent.service.LlmCallTraceCollector;
+import org.example.ca_agent.service.TokenUsageAccumulator;
 import org.example.ca_agent.workflow.CompetitiveAnalysisState;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +21,7 @@ class AgentRunTracerTest {
     @BeforeEach
     void setUp() {
         StateAssembler stateAssembler = mock(StateAssembler.class);
-        tracer = new AgentRunTracer(stateAssembler);
+        tracer = new AgentRunTracer(stateAssembler, new TokenUsageAccumulator(), new LlmCallTraceCollector());
     }
 
     @Test

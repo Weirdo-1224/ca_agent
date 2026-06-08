@@ -92,6 +92,10 @@ CREATE TABLE IF NOT EXISTS agent_run (
     end_time      TIMESTAMP,
     duration_ms   BIGINT,
     error_message TEXT,
+    prompt_tokens  INTEGER      DEFAULT 0,
+    completion_tokens INTEGER   DEFAULT 0,
+    total_tokens   INTEGER      DEFAULT 0,
+    llm_calls_json TEXT,
     created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

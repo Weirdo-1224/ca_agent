@@ -99,4 +99,17 @@ export interface AgentRunResponse {
   endTime: string;
   durationMs: number;
   errorMessage: string | null;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  llmCalls: LlmCallRecord[] | null;
+}
+
+export interface LlmCallRecord {
+  systemPrompt: string;
+  userPrompt: string;
+  response: string;
+  promptTokens: number;
+  completionTokens: number;
+  durationMs: number;
 }

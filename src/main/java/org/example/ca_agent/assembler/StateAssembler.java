@@ -46,8 +46,6 @@ public class StateAssembler {
                 .eq(ReviewIssueEntity::getTaskId, taskId));
         repairInstructionRepository.delete(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<RepairInstructionEntity>()
                 .eq(RepairInstructionEntity::getTaskId, taskId));
-        agentRunRepository.delete(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<AgentRunEntity>()
-                .eq(AgentRunEntity::getTaskId, taskId));
 
         // 3. 插入新记录
         saveEvidence(state, now);
@@ -199,6 +197,9 @@ public class StateAssembler {
             return;
         }
         for (org.example.ca_agent.dto.agent.AgentRunTrace trace : state.getAgentRuns()) {
+            if (trace.isPersisted()) {
+                continue;
+            }
             AgentRunEntity entity = new AgentRunEntity();
             entity.setRunId(trace.getRunId());
             entity.setTaskId(trace.getTaskId());
@@ -210,7 +211,12 @@ public class StateAssembler {
             entity.setEndTime(trace.getEndTime());
             entity.setDurationMs(trace.getDurationMs());
             entity.setErrorMessage(trace.getErrorMessage());
+            entity.setPromptTokens(trace.getPromptTokens());
+            entity.setCompletionTokens(trace.getCompletionTokens());
+            entity.setTotalTokens(trace.getTotalTokens());
+            entity.setLlmCallsJson(JsonUtils.toJson(trace.getLlmCalls()));
             agentRunRepository.insert(entity);
+            trace.setPersisted(true);
         }
     }
 }

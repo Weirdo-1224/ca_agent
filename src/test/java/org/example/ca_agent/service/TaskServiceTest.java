@@ -33,31 +33,33 @@ class TaskServiceTest {
     // ---------- createTask ----------
 
     @Test
-    void createTask_runsWorkflowAndSavesState() {
+    void createTask_savesInitialStateAndTriggersAsync() {
         TaskCreateRequest request = buildRequest();
-        CompetitiveAnalysisState mockState = buildCompletedState();
-        when(workflowService.run(any(TaskInputDTO.class))).thenReturn(mockState);
 
         TaskDetailResponse response = taskService.createTask(request);
 
-        verify(workflowService).run(argThat(input ->
-            input.getTaskName().equals("AI 编程工具竞品分析") &&
+        // 验证初始状态保存
+        verify(stateAssembler).saveState(argThat(state ->
+            state.getStatus() == TaskStatus.CREATED &&
+            state.getTaskInput().getTaskName().equals("编程工具竞品分析")
+        ));
+        // 验证异步工作流被触发
+        verify(workflowService).runAsync(argThat(input ->
+            input.getTaskName().equals("编程工具竞品分析") &&
             input.getDomain().equals("AI_CODING_TOOLS") &&
             input.getMaxIterations() == 2
         ));
-        verify(stateAssembler).saveState(mockState);
+        // 立即返回 CREATED 状态
         assertNotNull(response.getTaskId());
-        assertEquals("AI 编程工具竞品分析", response.getTaskName());
-        assertEquals(TaskStatus.COMPLETED, response.getStatus());
-        assertEquals(1, response.getIterationCount());
+        assertEquals("编程工具竞品分析", response.getTaskName());
+        assertEquals(TaskStatus.CREATED, response.getStatus());
+        assertEquals(0, response.getIterationCount());
         assertEquals(2, response.getMaxIterations());
     }
 
     @Test
     void createTask_generatesUniqueTaskId() {
         TaskCreateRequest request = buildRequest();
-        when(workflowService.run(any(TaskInputDTO.class)))
-                .thenAnswer(inv -> buildCompletedState());
 
         TaskDetailResponse response1 = taskService.createTask(request);
         TaskDetailResponse response2 = taskService.createTask(request);
@@ -152,7 +154,7 @@ class TaskServiceTest {
 
     private TaskCreateRequest buildRequest() {
         TaskCreateRequest req = new TaskCreateRequest();
-        req.setTaskName("AI 编程工具竞品分析");
+        req.setTaskName("编程工具竞品分析");
         req.setDomain("AI_CODING_TOOLS");
         req.setTargetProducts(java.util.List.of("Cursor", "Windsurf"));
         req.setAnalysisGoal("生成竞品分析报告");

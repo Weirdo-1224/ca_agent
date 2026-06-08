@@ -1,9 +1,11 @@
 package org.example.ca_agent.controller;
 
+import org.example.ca_agent.config.SyncAsyncTestConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ActiveProfiles;
@@ -19,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
+@Import(SyncAsyncTestConfig.class)
 @Transactional
 @Rollback
 class AnalysisTaskControllerTest {
@@ -40,21 +43,21 @@ class AnalysisTaskControllerTest {
 
     @Test
     void fullWorkflow_createsTaskAndExposesDetailReportEvidenceAndReview() throws Exception {
-        // 1. 创建任务并获取 taskId
+        // 1. 创建任务并获取 taskId（SyncAsyncTestConfig 使异步变同步，返回时工作流已完成）
         String response = mockMvc.perform(post("/api/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(DEFAULT_REQUEST_BODY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.taskId").isNotEmpty())
-                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.status").value("CREATED"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
 
         String taskId = response.replaceAll("(?s).*\"taskId\"\\s*:\\s*\"([^\"]+)\".*", "$1");
 
-        // 2. 验证任务详情接口
+        // 2. 验证任务详情接口（异步同步化后工作流已在 create 调用中完成）
         mockMvc.perform(get("/api/tasks/{taskId}", taskId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))

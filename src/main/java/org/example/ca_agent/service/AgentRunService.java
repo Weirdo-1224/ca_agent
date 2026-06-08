@@ -3,6 +3,8 @@ package org.example.ca_agent.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.example.ca_agent.common.BizException;
+import org.example.ca_agent.common.JsonUtils;
+import org.example.ca_agent.dto.agent.LlmCallRecord;
 import org.example.ca_agent.dto.response.AgentRunResponse;
 import org.example.ca_agent.entity.AgentRunEntity;
 import org.example.ca_agent.entity.AnalysisTaskEntity;
@@ -50,7 +52,18 @@ public class AgentRunService {
         response.setEndTime(entity.getEndTime());
         response.setDurationMs(entity.getDurationMs());
         response.setErrorMessage(entity.getErrorMessage());
+        response.setPromptTokens(entity.getPromptTokens());
+        response.setCompletionTokens(entity.getCompletionTokens());
+        response.setTotalTokens(entity.getTotalTokens());
+        response.setLlmCalls(parseLlmCalls(entity.getLlmCallsJson()));
         return response;
+    }
+
+    private List<LlmCallRecord> parseLlmCalls(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        return JsonUtils.fromJsonList(json, LlmCallRecord.class);
     }
 
     private <E extends Enum<E>> E parseEnum(Class<E> clazz, String value) {

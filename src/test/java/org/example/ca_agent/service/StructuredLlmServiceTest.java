@@ -1,6 +1,7 @@
 package org.example.ca_agent.service;
 
 import org.example.ca_agent.common.BizException;
+import org.example.ca_agent.dto.agent.LlmCallResult;
 import org.example.ca_agent.dto.agent.TaskInputDTO;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +17,7 @@ class StructuredLlmServiceTest {
     @Test
     void parsesStructuredResponse() {
         RecordingGateway gateway = new RecordingGateway("{\"taskId\":\"task-1\"}");
-        StructuredLlmService service = new StructuredLlmService(new LlmChatService(gateway));
+        StructuredLlmService service = new StructuredLlmService(new LlmChatService(gateway, new TokenUsageAccumulator(), new LlmCallTraceCollector()));
 
         TaskInputDTO result = service.generate("system", "user", TaskInputDTO.class);
 
@@ -27,7 +28,7 @@ class StructuredLlmServiceTest {
     @Test
     void retriesOnceAfterInvalidJson() {
         RecordingGateway gateway = new RecordingGateway("invalid", "{\"taskId\":\"task-1\"}");
-        StructuredLlmService service = new StructuredLlmService(new LlmChatService(gateway));
+        StructuredLlmService service = new StructuredLlmService(new LlmChatService(gateway, new TokenUsageAccumulator(), new LlmCallTraceCollector()));
 
         TaskInputDTO result = service.generate("system", "user", TaskInputDTO.class);
 
@@ -38,7 +39,7 @@ class StructuredLlmServiceTest {
     @Test
     void throwsBizExceptionAfterRetryIsExhausted() {
         RecordingGateway gateway = new RecordingGateway("invalid", "still invalid");
-        StructuredLlmService service = new StructuredLlmService(new LlmChatService(gateway));
+        StructuredLlmService service = new StructuredLlmService(new LlmChatService(gateway, new TokenUsageAccumulator(), new LlmCallTraceCollector()));
 
         assertThatThrownBy(() -> service.generate("system", "user", TaskInputDTO.class))
                 .isInstanceOf(BizException.class)
@@ -56,9 +57,9 @@ class StructuredLlmServiceTest {
         }
 
         @Override
-        public String call(String systemPrompt, String userPrompt) {
+        public LlmCallResult call(String systemPrompt, String userPrompt) {
             callCount++;
-            return responses.remove();
+            return LlmCallResult.ofContent(responses.remove());
         }
     }
 }

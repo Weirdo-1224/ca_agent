@@ -51,6 +51,9 @@ management:
 ca-agent:
   agent:
     mode: ${CA_AGENT_AGENT_MODE:mock}
+  llm:
+    connect-timeout: ${CA_AGENT_LLM_CONNECT_TIMEOUT:10000}
+    read-timeout: ${CA_AGENT_LLM_READ_TIMEOUT:120000}
   search:
     enabled: ${CA_AGENT_SEARCH_ENABLED:false}
     api-key: ${CA_AGENT_SEARCH_API_KEY:}

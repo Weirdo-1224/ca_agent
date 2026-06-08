@@ -24,4 +24,8 @@ public class AgentRunEntity {
     private LocalDateTime endTime;
     private Long durationMs;
     private String errorMessage;
+    private Integer promptTokens;
+    private Integer completionTokens;
+    private Integer totalTokens;
+    private String llmCallsJson;
 }
