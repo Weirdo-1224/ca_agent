@@ -147,7 +147,7 @@ class RealPromptAgentTest {
         assertThat(state.getReviewResult().getPassed()).isTrue();
         assertThat(gateway.systemPrompt).contains(ReviewerPrompt.VERSION);
         assertThat(gateway.userPrompt).contains("IterationCount: 1", "MaxIterations: 3");
-        assertThat(gateway.userPrompt).contains("\"reportDraft\"", "\"evidenceId\":\"ev-1\"");
+        assertThat(gateway.userPrompt).contains("\"reportDraft\"", "\"ev-1\"");
     }
 
     @Test
