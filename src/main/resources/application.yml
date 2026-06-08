@@ -59,4 +59,4 @@ ca-agent:
     api-key: ${CA_AGENT_SEARCH_API_KEY:}
     base-url: ${CA_AGENT_SEARCH_BASE_URL:https://metaso.cn/api/v1}
     timeout: ${CA_AGENT_SEARCH_TIMEOUT:30000}
-    max-results-per-query: ${CA_AGENT_SEARCH_MAX_RESULTS:5}
+    max-results-per-query: ${CA_AGENT_SEARCH_MAX_RESULTS:10}
