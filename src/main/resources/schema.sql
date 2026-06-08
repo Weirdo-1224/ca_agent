@@ -8,6 +8,10 @@ CREATE TABLE IF NOT EXISTS analysis_task (
     status          VARCHAR(32)  NOT NULL,
     iteration_count INTEGER      DEFAULT 0,
     max_iterations  INTEGER      DEFAULT 2,
+    review_passed   BOOLEAN,
+    review_score    INTEGER,
+    review_summary  TEXT,
+    next_action_json TEXT,
     created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

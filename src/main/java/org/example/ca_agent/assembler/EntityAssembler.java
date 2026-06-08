@@ -70,7 +70,14 @@ public class EntityAssembler {
                 new LambdaQueryWrapper<ReviewIssueEntity>().eq(ReviewIssueEntity::getTaskId, taskId));
         ReviewResultDTO reviewResult = new ReviewResultDTO();
         reviewResult.setTaskId(taskId);
-        reviewResult.setPassed(issueEntities == null || issueEntities.isEmpty());
+        if (taskEntity.getReviewPassed() != null) {
+            reviewResult.setPassed(taskEntity.getReviewPassed());
+        } else {
+            reviewResult.setPassed(issueEntities == null || issueEntities.isEmpty());
+        }
+        reviewResult.setScore(taskEntity.getReviewScore());
+        reviewResult.setSummary(taskEntity.getReviewSummary());
+        reviewResult.setNextAction(parseNextAction(taskEntity.getNextActionJson()));
         reviewResult.setIssues(toReviewIssues(issueEntities));
         state.setReviewResult(reviewResult);
 
@@ -209,6 +216,17 @@ public class EntityAssembler {
         try {
             return Enum.valueOf(clazz, value);
         } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private ReviewResultDTO.NextAction parseNextAction(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return JsonUtils.fromJson(json, ReviewResultDTO.NextAction.class);
+        } catch (Exception e) {
             return null;
         }
     }

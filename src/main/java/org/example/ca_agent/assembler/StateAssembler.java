@@ -74,6 +74,16 @@ public class StateAssembler {
         entity.setStatus(Optional.ofNullable(state.getStatus()).map(Enum::name).orElse(null));
         entity.setIterationCount(state.getIterationCount());
         entity.setMaxIterations(input.getMaxIterations());
+
+        // 持久化质检结果摘要（score, summary, passed, nextAction）
+        ReviewResultDTO reviewResult = state.getReviewResult();
+        if (reviewResult != null) {
+            entity.setReviewPassed(reviewResult.getPassed());
+            entity.setReviewScore(reviewResult.getScore());
+            entity.setReviewSummary(reviewResult.getSummary());
+            entity.setNextActionJson(JsonUtils.toJson(reviewResult.getNextAction()));
+        }
+
         entity.setUpdatedAt(now);
 
         if (entity.getId() == null) {
