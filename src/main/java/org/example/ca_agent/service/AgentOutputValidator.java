@@ -107,10 +107,21 @@ public class AgentOutputValidator {
 
     public void validateReviewer(ReviewResultDTO output, String taskId) {
         requireTaskId("Reviewer", output == null ? null : output.getTaskId(), taskId);
-        if (output.getPassed() == null || output.getScore() == null || output.getNextAction() == null) {
-            reject("Reviewer", "passed, score and nextAction must not be null");
+        if (output.getPassed() == null) {
+            reject("Reviewer", "passed must not be null");
         }
-        if (output.getNextAction().getAction() == null
+        // score 为 null 时给默认值，不阻断流程
+        if (output.getScore() == null) {
+            log.warn("[Reviewer] score is null, defaulting to 0");
+            output.setScore(0);
+        }
+        // nextAction 为 null 时构建默认值
+        if (output.getNextAction() == null) {
+            log.warn("[Reviewer] nextAction is null, defaulting to finish");
+            ReviewResultDTO.NextAction defaultAction = new ReviewResultDTO.NextAction();
+            defaultAction.setAction(output.getPassed() ? "finish" : "repair");
+            output.setNextAction(defaultAction);
+        } else if (output.getNextAction().getAction() == null
                 || !REVIEW_ACTIONS.contains(output.getNextAction().getAction())) {
             reject("Reviewer", "nextAction action must be finish, repair, or human_review");
         }

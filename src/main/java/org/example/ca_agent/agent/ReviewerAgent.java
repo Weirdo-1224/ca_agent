@@ -69,8 +69,9 @@ public class ReviewerAgent implements AgentNode {
                     ReviewResultDTO.class
             );
             reviewResult.setTaskId(taskId);
-            outputValidator.validateReviewer(reviewResult, taskId);
+            // 先保存结果到 state，确保即使验证失败也能持久化 score/summary
             state.setReviewResult(reviewResult);
+            outputValidator.validateReviewer(reviewResult, taskId);
             return state;
         }
 

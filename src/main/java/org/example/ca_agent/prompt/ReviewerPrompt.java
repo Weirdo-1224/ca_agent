@@ -33,17 +33,22 @@ public class ReviewerPrompt {
 
                 Create a ReviewResultDTO JSON object with required fields:
                 taskId, passed, score, summary, issues, nextAction.
+                - score MUST be an integer from 0 to 100 (e.g. 85). Never null, never a string.
+                - passed MUST be a boolean (true/false). Set to true if score >= 70, false otherwise.
+                - summary MUST be a non-empty string describing the overall quality assessment.
                 ReviewIssue fields: issueId, severity, type, description, targetAgent,
                 targetProduct, targetDimension, repairInstruction.
                 repairInstruction must be a single string (not an array). If multiple instructions exist, join them with semicolons inside one string.
                 NextAction fields: action, targetAgent, reason.
+                - action MUST be one of: finish, repair, or human_review.
+                - If passed=true, action should be "finish".
+                - If passed=false, action should be "repair" with targetAgent set to the agent that needs fixing.
                 AgentType values: PLANNER_AGENT, COLLECTOR_AGENT, EXTRACTOR_AGENT,
                 ANALYZER_AGENT, WRITER_AGENT, REVIEWER_AGENT.
                 ReviewIssueType values: MISSING_EVIDENCE, EVIDENCE_NOT_LINKED, SCHEMA_MISSING_FIELD,
                 COMPARISON_INCOMPLETE, VAGUE_FINDING, REPORT_MISSING_SECTION,
                 CITATION_FORMAT_ERROR, HALLUCINATION_RISK, UNKNOWN_FIELD_TOO_MANY.
                 Each issue targetAgent and nextAction targetAgent must use a valid AgentType enum value.
-                nextAction.action must be finish, repair, or human_review.
                 %s
                 """.formatted(reviewStateJson, repairInstructionsJson, iterationCount, maxIterations, languageInstruction(language));
     }
