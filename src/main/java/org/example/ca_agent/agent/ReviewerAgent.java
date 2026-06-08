@@ -82,8 +82,8 @@ public class ReviewerAgent implements AgentNode {
     }
 
     /**
-     * 构建精简的 Review 上下文，排除 agentRuns、rawSources 等大体积字段。
-     * 只保留 Reviewer 质检必需的信息：报告摘要、claim、对比矩阵、evidence索引。
+     * 构建 Review 上下文，仅排除 agentRuns 和 rawText 等无关大体积字段。
+     * 保留 Reviewer 质检必需的完整信息：证据内容、完整报告、claim、对比分析。
      */
     private String buildCompactReviewContext(CompetitiveAnalysisState state) {
         Map<String, Object> context = new LinkedHashMap<>();
@@ -91,10 +91,23 @@ public class ReviewerAgent implements AgentNode {
         context.put("domain", state.getTaskInput().getDomain());
         context.put("targetProducts", state.getTaskInput().getTargetProducts());
 
-        // Evidence index: evidenceId -> sourceTitle (no full contentSnippet)
-        context.put("evidenceIndex", buildEvidenceIndex(state));
+        // Evidence pool: 保留完整 contentSnippet 供 Reviewer 校验引用
+        if (state.getRawSourceSet() != null && state.getRawSourceSet().getEvidencePool() != null) {
+            List<Map<String, Object>> evidenceList = state.getRawSourceSet().getEvidencePool().stream().map(e -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("evidenceId", e.getEvidenceId());
+                m.put("productName", e.getProductName());
+                m.put("sourceType", e.getSourceType());
+                m.put("sourceTitle", e.getSourceTitle());
+                m.put("url", e.getUrl());
+                m.put("contentSnippet", e.getContentSnippet());
+                m.put("reliability", e.getReliability());
+                return m;
+            }).collect(Collectors.toList());
+            context.put("evidencePool", evidenceList);
+        }
 
-        // ProductProfileSet: only claims (lightweight)
+        // ProductProfileSet: claims + missingFields
         context.put("productProfiles", buildCompactProfiles(state.getProductProfileSet()));
 
         // CompetitiveAnalysis: full structure (already concise)
@@ -102,20 +115,12 @@ public class ReviewerAgent implements AgentNode {
             context.put("competitiveAnalysis", state.getCompetitiveAnalysis());
         }
 
-        // ReportDraft: section titles + truncated content + evidenceIds
-        context.put("reportDraft", buildCompactReport(state.getReportDraft()));
+        // ReportDraft: 完整内容（不截断），供 Reviewer 逐节验证
+        if (state.getReportDraft() != null) {
+            context.put("reportDraft", state.getReportDraft());
+        }
 
         return JsonUtils.toJson(context);
-    }
-
-    private Map<String, String> buildEvidenceIndex(CompetitiveAnalysisState state) {
-        Map<String, String> index = new LinkedHashMap<>();
-        if (state.getRawSourceSet() != null && state.getRawSourceSet().getEvidencePool() != null) {
-            for (Evidence e : state.getRawSourceSet().getEvidencePool()) {
-                index.put(e.getEvidenceId(), e.getSourceTitle());
-            }
-        }
-        return index;
     }
 
     private List<Map<String, Object>> buildCompactProfiles(ProductProfileSetDTO profileSet) {
@@ -129,26 +134,6 @@ public class ReviewerAgent implements AgentNode {
             m.put("missingFields", product.getMissingFields());
             return m;
         }).collect(Collectors.toList());
-    }
-
-    private Map<String, Object> buildCompactReport(ReportDraftDTO reportDraft) {
-        if (reportDraft == null) {
-            return Map.of();
-        }
-        Map<String, Object> compact = new LinkedHashMap<>();
-        compact.put("reportTitle", reportDraft.getReportTitle());
-        if (reportDraft.getSections() != null) {
-            List<Map<String, Object>> sections = reportDraft.getSections().stream().map(section -> {
-                Map<String, Object> s = new LinkedHashMap<>();
-                s.put("title", section.getTitle());
-                s.put("contentPreview", truncate(section.getContent(), 200));
-                s.put("evidenceIds", section.getEvidenceIds());
-                s.put("relatedClaimIds", section.getRelatedClaimIds());
-                return s;
-            }).collect(Collectors.toList());
-            compact.put("sections", sections);
-        }
-        return compact;
     }
 
     private static String truncate(String text, int maxLen) {
