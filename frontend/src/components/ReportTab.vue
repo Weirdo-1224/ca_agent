@@ -30,25 +30,25 @@
             :ref="(el) => setSectionRef(i, el)"
             class="section-card"
           >
-            <h4 class="section-heading">{{ s.title }}</h4>
+            <!-- 章节标题行 + 右上角证据链按钮 -->
+            <div class="section-top">
+              <h4 class="section-heading">{{ s.title }}</h4>
+              <div v-if="s.evidenceIds?.length || s.relatedClaimIds?.length" class="section-top-tags">
+                <span v-if="s.evidenceIds?.length" class="top-tag tag-evidence" @click="openDrawer(s)">证据 {{ s.evidenceIds.length }}</span>
+                <span v-if="s.relatedClaimIds?.length" class="top-tag tag-claim" @click="openDrawer(s)">结论 {{ s.relatedClaimIds.length }}</span>
+              </div>
+            </div>
+
+            <!-- 正文 -->
             <pre class="section-text">{{ s.content }}</pre>
 
-            <!-- 关联证据 & Claim -->
-            <div class="section-refs" v-if="s.evidenceIds?.length || s.relatedClaimIds?.length">
-              <div v-if="s.evidenceIds?.length" class="ref-row">
-                <span class="ref-label">关联证据</span>
-                <span
-                  v-for="eid in s.evidenceIds"
-                  :key="eid"
-                  class="ref-badge evidence-badge"
-                  @click="$emit('searchEvidence', eid)"
-                  title="点击跳转到证据 Tab"
-                >{{ shortId(eid) }}</span>
-              </div>
-              <div v-if="s.relatedClaimIds?.length" class="ref-row">
-                <span class="ref-label">关联结论</span>
-                <span v-for="cid in s.relatedClaimIds" :key="cid" class="ref-badge claim-badge">{{ shortId(cid) }}</span>
-              </div>
+            <!-- 底部轻量证据摘要栏 -->
+            <div v-if="s.evidenceIds?.length || s.relatedClaimIds?.length" class="evidence-summary-bar" @click="openDrawer(s)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              <span class="summary-text">
+                证据链：{{ s.evidenceIds?.length || 0 }} 条证据，{{ s.relatedClaimIds?.length || 0 }} 条结论
+              </span>
+              <span class="summary-action">查看详情</span>
             </div>
           </div>
         </div>
@@ -60,12 +60,73 @@
       <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       <p>{{ emptyText }}</p>
     </div>
+
+    <!-- 证据链详情 Drawer -->
+    <el-drawer v-model="drawerVisible" title="证据链详情" size="480px" direction="rtl" :append-to-body="true">
+      <template v-if="drawerSection">
+        <div class="drawer-body">
+          <!-- 章节标题 -->
+          <div class="drawer-section-title">{{ drawerSection.title }}</div>
+
+          <!-- 关联证据 -->
+          <div class="drawer-group">
+            <div class="drawer-group-header">
+              <span class="group-label">关联证据</span>
+              <span class="group-count">{{ drawerSection.evidenceIds?.length || 0 }}</span>
+            </div>
+            <div v-if="drawerSection.evidenceIds?.length" class="badge-wrap">
+              <span
+                v-for="eid in drawerSection.evidenceIds"
+                :key="eid"
+                class="drawer-badge evidence-badge"
+                @click="copyId(eid)"
+                title="点击复制 ID"
+              >
+                {{ eid }}
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </span>
+            </div>
+            <div v-else class="no-data">暂无关联证据</div>
+          </div>
+
+          <!-- 关联结论 -->
+          <div class="drawer-group">
+            <div class="drawer-group-header">
+              <span class="group-label">关联结论</span>
+              <span class="group-count">{{ drawerSection.relatedClaimIds?.length || 0 }}</span>
+            </div>
+            <div v-if="drawerSection.relatedClaimIds?.length" class="badge-wrap">
+              <span
+                v-for="cid in drawerSection.relatedClaimIds"
+                :key="cid"
+                class="drawer-badge claim-badge"
+                @click="copyId(cid)"
+                title="点击复制 ID"
+              >
+                {{ cid }}
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </span>
+            </div>
+            <div v-else class="no-data">暂无关联结论</div>
+          </div>
+
+          <!-- 跳转操作 -->
+          <div v-if="drawerSection.evidenceIds?.length" class="drawer-actions">
+            <button class="jump-btn" @click="jumpToEvidence">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              跳转到证据 Tab
+            </button>
+          </div>
+        </div>
+      </template>
+    </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import type { ReportResponse } from '@/types';
+import { ElMessage } from 'element-plus';
+import type { ReportResponse, ReportSection } from '@/types';
 import { isRunningStatus } from '@/utils/status';
 
 const props = defineProps<{
@@ -73,7 +134,7 @@ const props = defineProps<{
   taskStatus?: string;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   searchEvidence: [evidenceId: string];
 }>();
 
@@ -89,15 +150,31 @@ function scrollTo(i: number) {
   sectionRefs[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function shortId(id: string): string {
-  if (!id) return '';
-  return id.length > 8 ? '...' + id.slice(-6) : id;
-}
-
 const emptyText = computed(() => {
   if (isRunningStatus(props.taskStatus)) return '报告生成中...';
   return '报告尚未生成或未保存';
 });
+
+// Drawer logic
+const drawerVisible = ref(false);
+const drawerSection = ref<ReportSection | null>(null);
+
+function openDrawer(section: ReportSection) {
+  drawerSection.value = section;
+  drawerVisible.value = true;
+}
+
+function copyId(id: string) {
+  navigator.clipboard.writeText(id);
+  ElMessage.success('ID 已复制');
+}
+
+function jumpToEvidence() {
+  if (drawerSection.value?.evidenceIds?.length) {
+    drawerVisible.value = false;
+    emit('searchEvidence', drawerSection.value.evidenceIds[0]);
+  }
+}
 </script>
 
 <style scoped>
@@ -196,12 +273,40 @@ const emptyText = computed(() => {
   background: #ffffff;
   border: 1px solid #f1f5f9;
 }
+
+/* Section top: title + right tags */
+.section-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
 .section-heading {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: #111827;
 }
+.section-top-tags {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.top-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.top-tag:hover { opacity: 0.7; }
+.top-tag.tag-evidence { background: #dbeafe; color: #1e40af; }
+.top-tag.tag-claim { background: #ffedd5; color: #c2410c; }
+
 .section-text {
   white-space: pre-wrap;
   word-break: break-word;
@@ -212,40 +317,116 @@ const emptyText = computed(() => {
   margin: 0;
 }
 
-.section-refs {
-  margin-top: 16px;
-  padding: 12px 14px;
-  background: #f8fafc;
-  border-radius: 10px;
-  border: 1px solid #f1f5f9;
-}
-.ref-row {
+/* Evidence summary bar */
+.evidence-summary-bar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-.ref-row:last-child { margin-bottom: 0; }
-.ref-label {
-  font-size: 11px;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: all 0.15s;
   color: #6b7280;
-  font-weight: 600;
-  margin-right: 4px;
 }
-.ref-badge {
-  display: inline-block;
-  padding: 2px 8px;
+.evidence-summary-bar:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+.summary-text {
+  font-size: 12px;
+  flex: 1;
+}
+.summary-action {
+  font-size: 12px;
+  color: #2563eb;
+  font-weight: 500;
+}
+
+/* Drawer styles */
+.drawer-body {
+  padding: 0 4px;
+}
+.drawer-section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.drawer-group {
+  margin-bottom: 24px;
+}
+.drawer-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.group-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+.group-count {
+  font-size: 11px;
+  padding: 1px 8px;
   border-radius: 10px;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.badge-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.drawer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
   font-size: 11px;
   font-weight: 500;
   font-family: 'JetBrains Mono', monospace;
   cursor: pointer;
   transition: opacity 0.15s;
+  word-break: break-all;
 }
-.ref-badge:hover { opacity: 0.75; }
-.evidence-badge { background: #dbeafe; color: #1e40af; }
-.claim-badge { background: #ffedd5; color: #c2410c; cursor: default; }
+.drawer-badge:hover { opacity: 0.7; }
+.drawer-badge.evidence-badge { background: #dbeafe; color: #1e40af; }
+.drawer-badge.claim-badge { background: #ffedd5; color: #c2410c; }
+.no-data {
+  font-size: 13px;
+  color: #9ca3af;
+  padding: 8px 0;
+}
+
+.drawer-actions {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #f3f4f6;
+}
+.jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #2563eb;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.jump-btn:hover {
+  background: #dbeafe;
+}
 
 /* Empty */
 .empty-state {
