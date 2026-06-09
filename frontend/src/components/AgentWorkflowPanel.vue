@@ -1,29 +1,34 @@
 <template>
   <div class="workflow-panel">
-    <h4 class="panel-title">Agent 工作流</h4>
+    <div class="panel-header">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Agent 工作流</span>
+    </div>
     <div class="agent-list">
       <div
-        v-for="agent in agents"
+        v-for="(agent, idx) in agents"
         :key="agent.type"
-        class="agent-item"
-        :class="agentClass(agent)"
+        class="agent-card"
+        :class="'state-' + agent.state"
       >
-        <div class="agent-icon">
-          <el-icon v-if="agent.state === 'success'" color="#67c23a"><CircleCheckFilled /></el-icon>
-          <el-icon v-else-if="agent.state === 'failed'" color="#f56c6c"><CircleCloseFilled /></el-icon>
-          <el-icon v-else-if="agent.state === 'running'" color="#409eff"><Loading /></el-icon>
-          <el-icon v-else color="#c0c4cc"><Clock /></el-icon>
-        </div>
-        <div class="agent-info">
-          <div class="agent-name">{{ agent.label }}</div>
-          <div class="agent-desc">{{ agent.description }}</div>
-          <div v-if="agent.runCount > 0" class="agent-stats">
-            执行 {{ agent.runCount }} 次
-            <span v-if="agent.lastDuration != null"> · {{ formatDuration(agent.lastDuration) }}</span>
+        <!-- 连接线 -->
+        <div v-if="idx > 0" class="connector-line" :class="'line-' + agents[idx-1].state"></div>
+
+        <div class="agent-row">
+          <div class="agent-icon-wrap" :class="'icon-' + agent.state">
+            <svg v-if="agent.state === 'success'" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg v-else-if="agent.state === 'failed'" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <svg v-else-if="agent.state === 'running'" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+          </div>
+          <div class="agent-content">
+            <div class="agent-name">{{ agent.label }}</div>
+            <div class="agent-desc">{{ agent.description }}</div>
           </div>
         </div>
-        <div class="agent-state-tag">
-          <el-tag :type="stateTagType(agent.state)" size="small" round>{{ stateText(agent.state) }}</el-tag>
+        <div v-if="agent.runCount > 0" class="agent-stats">
+          执行 {{ agent.runCount }} 次
+          <span v-if="agent.lastDuration != null"> · {{ formatDuration(agent.lastDuration) }}</span>
         </div>
       </div>
     </div>
@@ -32,7 +37,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { CircleCheckFilled, CircleCloseFilled, Loading, Clock } from '@element-plus/icons-vue';
 import type { AgentRunResponse } from '@/types';
 import { getCurrentAgentByStatus } from '@/utils/status';
 import { formatDuration } from '@/utils/time';
@@ -73,7 +77,6 @@ const agents = computed<AgentInfo[]>(() => {
     if (lastRun) {
       state = lastRun.status === 'SUCCESS' ? 'success' : 'failed';
     }
-    // If current task status maps to this agent, it's running
     if (currentAgent === def.label + 'Agent' || currentAgent === def.label) {
       state = 'running';
     }
@@ -88,93 +91,92 @@ const agents = computed<AgentInfo[]>(() => {
     };
   });
 });
-
-function agentClass(agent: AgentInfo) {
-  return `agent-${agent.state}`;
-}
-
-function stateTagType(state: AgentState) {
-  switch (state) {
-    case 'success': return 'success';
-    case 'failed': return 'danger';
-    case 'running': return 'primary';
-    default: return 'info';
-  }
-}
-
-function stateText(state: AgentState) {
-  switch (state) {
-    case 'success': return '完成';
-    case 'failed': return '失败';
-    case 'running': return '运行中';
-    default: return '等待';
-  }
-}
 </script>
 
 <style scoped>
 .workflow-panel {
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #ebeef5;
-  padding: 16px;
-  height: 100%;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
 }
-.panel-title {
-  margin: 0 0 16px;
-  font-size: 15px;
-  color: #303133;
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 18px;
 }
+
 .agent-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
-.agent-item {
+
+.agent-card {
+  position: relative;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #fafbfc;
+  transition: all 0.2s;
+}
+.agent-card + .agent-card {
+  margin-top: 8px;
+}
+
+.agent-card.state-success { background: #f0fdf4; border-color: #bbf7d0; }
+.agent-card.state-running { background: #eff6ff; border-color: #bfdbfe; }
+.agent-card.state-failed { background: #fef2f2; border-color: #fecaca; }
+.agent-card.state-waiting { background: #fafbfc; border-color: #e5e7eb; }
+
+.connector-line {
+  position: absolute;
+  top: -8px;
+  left: 25px;
+  width: 2px;
+  height: 8px;
+  background: #e5e7eb;
+}
+.connector-line.line-success { background: #22c55e; }
+.connector-line.line-running { background: #2563eb; }
+
+.agent-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid #ebeef5;
-  transition: all 0.2s;
 }
-.agent-item.agent-running {
-  border-color: #409eff;
-  background: #ecf5ff;
-}
-.agent-item.agent-success {
-  border-color: #e1f3d8;
-  background: #f0f9eb;
-}
-.agent-item.agent-failed {
-  border-color: #fde2e2;
-  background: #fef0f0;
-}
-.agent-icon {
+
+.agent-icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  font-size: 20px;
 }
-.agent-info {
-  flex: 1;
-  min-width: 0;
-}
-.agent-name {
-  font-weight: 600;
-  font-size: 13px;
-  color: #303133;
-}
-.agent-desc {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 2px;
-}
+.agent-icon-wrap.icon-success { background: #dcfce7; color: #16a34a; }
+.agent-icon-wrap.icon-failed { background: #fee2e2; color: #dc2626; }
+.agent-icon-wrap.icon-running { background: #dbeafe; color: #2563eb; }
+.agent-icon-wrap.icon-waiting { background: #f3f4f6; color: #9ca3af; }
+
+.agent-content { flex: 1; min-width: 0; }
+.agent-name { font-size: 13px; font-weight: 600; color: #111827; }
+.agent-desc { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
 .agent-stats {
+  margin-top: 6px;
+  padding-left: 38px;
   font-size: 11px;
-  color: #606266;
-  margin-top: 3px;
+  color: #6b7280;
 }
-.agent-state-tag {
-  flex-shrink: 0;
+
+.spinning {
+  animation: spin 1.2s linear infinite;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>

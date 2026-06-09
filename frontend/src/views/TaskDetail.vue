@@ -8,10 +8,14 @@
     </div>
 
     <template v-else-if="task">
-      <!-- 顶部状态区 -->
+      <!-- 顶部状态卡片 -->
       <TaskStatusHeader
         :detail="task"
         :loading="refreshing"
+        :agent-runs="agentRuns"
+        :report="report"
+        :evidence="evidence"
+        :review="review"
         @refresh="refreshAll"
         @back="$router.push('/')"
       />
@@ -23,23 +27,25 @@
         </aside>
 
         <main class="detail-main">
-          <el-tabs v-model="activeTab" type="border-card">
-            <el-tab-pane label="概览" name="overview">
-              <OverviewTab :task="task" :agent-runs="agentRuns" :report="report" :evidence="evidence" :review="review" />
-            </el-tab-pane>
-            <el-tab-pane label="报告" name="report">
-              <ReportTab :report="report" :task-status="task.status" @search-evidence="searchEvidence" />
-            </el-tab-pane>
-            <el-tab-pane label="证据" name="evidence">
-              <EvidenceTab :evidence="evidence" :report="report" :task-status="task.status" ref="evidenceTabRef" />
-            </el-tab-pane>
-            <el-tab-pane label="质检" name="review">
-              <ReviewTab :review="review" :task-status="task.status" />
-            </el-tab-pane>
-            <el-tab-pane label="Agent 轨迹" name="runs">
-              <AgentRunsTab :agent-runs="agentRuns" />
-            </el-tab-pane>
-          </el-tabs>
+          <div class="tabs-card">
+            <el-tabs v-model="activeTab">
+              <el-tab-pane label="概览" name="overview">
+                <OverviewTab :task="task" :agent-runs="agentRuns" :report="report" :evidence="evidence" :review="review" />
+              </el-tab-pane>
+              <el-tab-pane label="报告" name="report">
+                <ReportTab :report="report" :task-status="task.status" @search-evidence="searchEvidence" />
+              </el-tab-pane>
+              <el-tab-pane label="证据" name="evidence">
+                <EvidenceTab :evidence="evidence" :report="report" :task-status="task.status" ref="evidenceTabRef" />
+              </el-tab-pane>
+              <el-tab-pane label="质检" name="review">
+                <ReviewTab :review="review" :task-status="task.status" />
+              </el-tab-pane>
+              <el-tab-pane label="Agent 轨迹" name="runs">
+                <AgentRunsTab :agent-runs="agentRuns" />
+              </el-tab-pane>
+            </el-tabs>
+          </div>
         </main>
       </div>
     </template>
@@ -135,12 +141,10 @@ async function initialLoad() {
 
 function startPolling() {
   stopPolling();
-  // Poll task + agent-runs every 3s
   taskTimer = setInterval(async () => {
     await loadTask();
     await loadAgentRuns();
   }, 3000);
-  // Poll evidence every 6s
   evidenceTimer = setInterval(() => {
     loadEvidence();
   }, 6000);
@@ -152,18 +156,13 @@ function stopPolling() {
   if (evidenceTimer) { clearInterval(evidenceTimer); evidenceTimer = null; }
 }
 
-// Watch task status changes
 watch(() => task.value?.status, (newStatus, oldStatus) => {
   if (!newStatus) return;
-
-  // When entering WRITING/REVIEWING/REPAIRING or terminal, also load report & review
   const loadReportStages = ['WRITING', 'REVIEWING', 'REPAIRING'];
   if (loadReportStages.includes(newStatus) || isTerminalStatus(newStatus)) {
     loadReport();
     loadReview();
   }
-
-  // When entering terminal state, stop polling & do final refresh
   if (isTerminalStatus(newStatus) && !isTerminalStatus(oldStatus)) {
     stopPolling();
     refreshAll();
@@ -172,7 +171,6 @@ watch(() => task.value?.status, (newStatus, oldStatus) => {
 
 function searchEvidence(evidenceId: string) {
   activeTab.value = 'evidence';
-  // Next tick to allow tab switch, then trigger search
   setTimeout(() => {
     evidenceTabRef.value?.setSearchKeyword(evidenceId);
   }, 100);
@@ -192,9 +190,9 @@ onUnmounted(() => {
 
 <style scoped>
 .detail-page {
-  padding: 20px;
-  max-width: 1400px;
+  max-width: 1320px;
   margin: 0 auto;
+  padding: 24px;
 }
 .page-error {
   display: flex;
@@ -204,17 +202,58 @@ onUnmounted(() => {
 }
 .detail-body {
   display: flex;
-  gap: 16px;
+  gap: 20px;
   align-items: flex-start;
 }
 .detail-aside {
-  width: 260px;
+  width: 280px;
   flex-shrink: 0;
   position: sticky;
-  top: 16px;
+  top: 88px;
 }
 .detail-main {
   flex: 1;
   min-width: 0;
+}
+.tabs-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+  overflow: hidden;
+}
+.tabs-card :deep(.el-tabs__header) {
+  background: #f8fafc;
+  margin: 0;
+  padding: 0 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.tabs-card :deep(.el-tabs__nav-wrap::after) {
+  display: none;
+}
+.tabs-card :deep(.el-tabs__item) {
+  height: 48px;
+  line-height: 48px;
+  font-size: 14px;
+  color: #6b7280;
+}
+.tabs-card :deep(.el-tabs__item.is-active) {
+  color: #2563eb;
+  font-weight: 600;
+}
+.tabs-card :deep(.el-tabs__active-bar) {
+  background-color: #2563eb;
+}
+.tabs-card :deep(.el-tabs__content) {
+  padding: 24px;
+}
+
+@media (max-width: 1000px) {
+  .detail-body {
+    flex-direction: column;
+  }
+  .detail-aside {
+    width: 100%;
+    position: static;
+  }
 }
 </style>
