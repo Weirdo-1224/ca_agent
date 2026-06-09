@@ -9,7 +9,7 @@ public class MetasoSearchProperties {
     private String apiKey = "";
     private String baseUrl = "https://metaso.cn/api/v1";
     private int timeout = 30000;
-    private int maxResultsPerQuery = 5;
+    private int maxResultsPerQuery = 10;
 
     public boolean isEnabled() {
         return enabled && !apiKey.isBlank();

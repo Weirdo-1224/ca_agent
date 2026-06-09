@@ -22,6 +22,10 @@ public class AnalysisTaskEntity {
     private String status;
     private Integer iterationCount;
     private Integer maxIterations;
+    private Boolean reviewPassed;
+    private Integer reviewScore;
+    private String reviewSummary;
+    private String nextActionJson;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

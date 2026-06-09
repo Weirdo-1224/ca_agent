@@ -310,14 +310,19 @@ class StateAssemblerTest {
     }
 
     @Test
-    void saveState_clearsOldAgentRunsBeforeInsertingNew() {
-        state.getAgentRuns().add(buildTrace("run-1", AgentType.PLANNER_AGENT, "SUCCESS"));
+    void saveState_incrementalAgentRun_skipsAlreadyPersisted() {
+        AgentRunTrace trace = buildTrace("run-1", AgentType.PLANNER_AGENT, "SUCCESS");
+        state.getAgentRuns().add(trace);
 
         stateAssembler.saveState(state);
 
-        InOrder inOrder = inOrder(agentRunRepository);
-        inOrder.verify(agentRunRepository).delete(any());
-        inOrder.verify(agentRunRepository).insert(any(AgentRunEntity.class));
+        // First save inserts
+        verify(agentRunRepository).insert(any(AgentRunEntity.class));
+
+        // Second save should skip (already persisted)
+        reset(agentRunRepository);
+        stateAssembler.saveState(state);
+        verify(agentRunRepository, never()).insert(any(AgentRunEntity.class));
     }
 
     @Test

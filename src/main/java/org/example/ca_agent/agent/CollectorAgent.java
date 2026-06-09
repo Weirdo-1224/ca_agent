@@ -88,10 +88,18 @@ public class CollectorAgent implements AgentNode {
         List<SourceType> preferredTypes = task.getPreferredSourceTypes();
 
         if (queries == null || queries.isEmpty()) {
-            queries = List.of(productName + " AI coding assistant");
+            queries = List.of(
+                    productName + " official site",
+                    productName + " pricing plans",
+                    productName + " developer documentation API",
+                    productName + " review comparison"
+            );
         }
 
-        int maxPerProduct = (searchProperties != null && searchProperties.isEnabled()) ? 5 : 3;
+        // 每个产品最多 15 条证据，确保多维度覆盖
+        int maxPerProduct = 15;
+        // 每个 query 最多取 3 条，确保每个 query 都能执行
+        int maxPerQuery = 3;
         int collected = 0;
 
         for (String query : queries) {
@@ -102,8 +110,9 @@ public class CollectorAgent implements AgentNode {
                 break;
             }
             List<MetasoSearchResponse.WebpageResult> results = webSearchTool.search(query);
+            int queryCollected = 0;
             for (MetasoSearchResponse.WebpageResult result : results) {
-                if (collected >= maxPerProduct) {
+                if (collected >= maxPerProduct || queryCollected >= maxPerQuery) {
                     break;
                 }
                 String url = result.getLink() != null ? result.getLink() : result.getUrl();
@@ -139,6 +148,7 @@ public class CollectorAgent implements AgentNode {
                 evidencePool.add(evidence);
 
                 collected++;
+                queryCollected++;
             }
         }
 

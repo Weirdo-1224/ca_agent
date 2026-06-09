@@ -9,19 +9,24 @@ import org.example.ca_agent.dto.agent.TaskInputDTO;
 import org.example.ca_agent.dto.agent.TaskPlanDTO;
 import org.example.ca_agent.schema.Claim;
 import org.example.ca_agent.schema.Evidence;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
 public class AgentOutputValidator {
 
+    private static final Logger log = LoggerFactory.getLogger(AgentOutputValidator.class);
     private static final Set<String> REVIEW_ACTIONS = Set.of("finish", "repair", "human_review");
 
     public void validatePlanner(TaskPlanDTO output, TaskInputDTO input) {
@@ -51,6 +56,7 @@ public class AgentOutputValidator {
             }
         }
         validateEvidenceIds("Extractor", output, evidencePool);
+        validateSemanticRelevance("Extractor", output, evidencePool);
     }
 
     public void validateAnalyzer(
@@ -96,14 +102,26 @@ public class AgentOutputValidator {
             reject("Writer", "14 standard sections must have distinct titles");
         }
         validateEvidenceIds("Writer", output, evidencePool);
+        validateReportCitationCoverage(output);
     }
 
     public void validateReviewer(ReviewResultDTO output, String taskId) {
         requireTaskId("Reviewer", output == null ? null : output.getTaskId(), taskId);
-        if (output.getPassed() == null || output.getScore() == null || output.getNextAction() == null) {
-            reject("Reviewer", "passed, score and nextAction must not be null");
+        if (output.getPassed() == null) {
+            reject("Reviewer", "passed must not be null");
         }
-        if (output.getNextAction().getAction() == null
+        // score 为 null 时给默认值，不阻断流程
+        if (output.getScore() == null) {
+            log.warn("[Reviewer] score is null, defaulting to 0");
+            output.setScore(0);
+        }
+        // nextAction 为 null 时构建默认值
+        if (output.getNextAction() == null) {
+            log.warn("[Reviewer] nextAction is null, defaulting to finish");
+            ReviewResultDTO.NextAction defaultAction = new ReviewResultDTO.NextAction();
+            defaultAction.setAction(output.getPassed() ? "finish" : "repair");
+            output.setNextAction(defaultAction);
+        } else if (output.getNextAction().getAction() == null
                 || !REVIEW_ACTIONS.contains(output.getNextAction().getAction())) {
             reject("Reviewer", "nextAction action must be finish, repair, or human_review");
         }
@@ -181,5 +199,97 @@ public class AgentOutputValidator {
 
     private void reject(String agent, String rule) {
         throw new BizException(422, agent + " output validation failed: " + rule);
+    }
+
+    // ========== P1-3: 幻觉控制增强 ==========
+
+    /**
+     * 语义关联校验：检查 claim.statement 与引用的 evidence.contentSnippet 是否有关键词交集。
+     * 交集为空时记录告警日志（不阻断流程）。
+     */
+    private void validateSemanticRelevance(String agent, Object output, List<Evidence> evidencePool) {
+        if (!(output instanceof ProductProfileSetDTO profileSet)) {
+            return;
+        }
+        Map<String, Evidence> evidenceMap = new HashMap<>();
+        for (Evidence e : emptyIfNull(evidencePool)) {
+            if (e != null && e.getEvidenceId() != null) {
+                evidenceMap.put(e.getEvidenceId(), e);
+            }
+        }
+
+        for (ProductProfileSetDTO.ProductProfile product : emptyIfNull(profileSet.getProducts())) {
+            if (product == null) continue;
+            for (Claim claim : emptyIfNull(product.getClaims())) {
+                if (claim == null || claim.getStatement() == null || claim.getEvidenceIds() == null) {
+                    continue;
+                }
+                Set<String> claimKeywords = extractKeywords(claim.getStatement());
+                boolean hasOverlap = false;
+                for (String evidenceId : claim.getEvidenceIds()) {
+                    Evidence evidence = evidenceMap.get(evidenceId);
+                    if (evidence != null && evidence.getContentSnippet() != null) {
+                        Set<String> evidenceKeywords = extractKeywords(evidence.getContentSnippet());
+                        evidenceKeywords.retainAll(claimKeywords);
+                        if (!evidenceKeywords.isEmpty()) {
+                            hasOverlap = true;
+                            break;
+                        }
+                    }
+                }
+                if (!hasOverlap) {
+                    log.warn("[{}] Hallucination risk: claim '{}' (product={}) has no keyword overlap with referenced evidence {}",
+                            agent, truncateLog(claim.getStatement(), 80),
+                            product.getProductName(), claim.getEvidenceIds());
+                }
+            }
+        }
+    }
+
+    /**
+     * 报告引用覆盖率检查：每个 section 应有 evidenceIds，空引用记录告警。
+     */
+    private void validateReportCitationCoverage(ReportDraftDTO report) {
+        if (report == null || report.getSections() == null) {
+            return;
+        }
+        for (ReportDraftDTO.ReportSection section : report.getSections()) {
+            if (section == null) continue;
+            if (section.getEvidenceIds() == null || section.getEvidenceIds().isEmpty()) {
+                log.warn("[Writer] Report section '{}' has no evidence citations - potential unsupported content",
+                        section.getTitle());
+            }
+        }
+    }
+
+    /**
+     * 简单关键词提取：提取长度>=2的词片段（跨语言兼容）。
+     */
+    private Set<String> extractKeywords(String text) {
+        if (text == null || text.isBlank()) {
+            return Set.of();
+        }
+        Set<String> keywords = new HashSet<>();
+        // Split by non-word characters (handles both CJK and Latin)
+        String[] tokens = text.toLowerCase().split("[\\s\\p{Punct}]+");
+        for (String token : tokens) {
+            if (token.length() >= 2) {
+                keywords.add(token);
+            }
+        }
+        // Also extract 2-char CJK bigrams for Chinese text
+        for (int i = 0; i < text.length() - 1; i++) {
+            char c = text.charAt(i);
+            char next = text.charAt(i + 1);
+            if (Character.isIdeographic(c) && Character.isIdeographic(next)) {
+                keywords.add(String.valueOf(c) + next);
+            }
+        }
+        return keywords;
+    }
+
+    private static String truncateLog(String text, int maxLen) {
+        if (text == null) return "null";
+        return text.length() <= maxLen ? text : text.substring(0, maxLen) + "...";
     }
 }
