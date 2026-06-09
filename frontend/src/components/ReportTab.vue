@@ -21,8 +21,23 @@
         <!-- 右侧正文 -->
         <div class="section-content">
           <div class="report-header">
-            <h3 class="report-title">{{ report.reportTitle }}</h3>
-            <span class="format-badge">{{ report.reportFormat }}</span>
+            <div class="report-header-left">
+              <h3 class="report-title">{{ report.reportTitle }}</h3>
+              <span class="format-badge">{{ report.reportFormat }}</span>
+            </div>
+            <div class="reading-mode-switch">
+              <span
+                class="mode-option"
+                :class="{ active: readingMode === 'clean' }"
+                @click="readingMode = 'clean'"
+              >简洁阅读</span>
+              <span class="mode-divider">/</span>
+              <span
+                class="mode-option"
+                :class="{ active: readingMode === 'evidence' }"
+                @click="readingMode = 'evidence'"
+              >显示证据</span>
+            </div>
           </div>
           <div
             v-for="(s, i) in report.sections"
@@ -42,13 +57,37 @@
             <!-- 正文 -->
             <pre class="section-text">{{ s.content }}</pre>
 
-            <!-- 底部轻量证据摘要栏 -->
-            <div v-if="s.evidenceIds?.length || s.relatedClaimIds?.length" class="evidence-summary-bar" @click="openDrawer(s)">
+            <!-- 简洁模式：底部轻量证据摘要栏 -->
+            <div v-if="readingMode === 'clean' && (s.evidenceIds?.length || s.relatedClaimIds?.length)" class="evidence-summary-bar" @click="openDrawer(s)">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
               <span class="summary-text">
                 证据链：{{ s.evidenceIds?.length || 0 }} 条证据，{{ s.relatedClaimIds?.length || 0 }} 条结论
               </span>
               <span class="summary-action">查看详情</span>
+            </div>
+
+            <!-- 显示证据模式：展开证据和结论列表 -->
+            <div v-if="readingMode === 'evidence' && (s.evidenceIds?.length || s.relatedClaimIds?.length)" class="inline-evidence-block">
+              <div v-if="s.evidenceIds?.length" class="inline-ref-row">
+                <span class="inline-ref-label">关联证据</span>
+                <span
+                  v-for="eid in s.evidenceIds"
+                  :key="eid"
+                  class="inline-badge evidence-badge"
+                  @click="$emit('searchEvidence', eid)"
+                  title="点击跳转到证据 Tab"
+                >{{ eid }}</span>
+              </div>
+              <div v-if="s.relatedClaimIds?.length" class="inline-ref-row">
+                <span class="inline-ref-label">关联结论</span>
+                <span
+                  v-for="cid in s.relatedClaimIds"
+                  :key="cid"
+                  class="inline-badge claim-badge"
+                  @click="copyId(cid)"
+                  title="点击复制 ID"
+                >{{ cid }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -138,6 +177,7 @@ const emit = defineEmits<{
   searchEvidence: [evidenceId: string];
 }>();
 
+const readingMode = ref<'clean' | 'evidence'>('clean');
 const activeIndex = ref(0);
 const sectionRefs: Record<number, HTMLElement | null> = {};
 
@@ -249,8 +289,45 @@ function jumpToEvidence() {
 .report-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 24px;
+}
+.report-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Reading mode switch */
+.reading-mode-switch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+.mode-option {
+  font-size: 12px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: all 0.15s;
+  user-select: none;
+}
+.mode-option:hover { color: #6b7280; }
+.mode-option.active {
+  color: #2563eb;
+  background: #eff6ff;
+  font-weight: 600;
+}
+.mode-divider {
+  font-size: 12px;
+  color: #d1d5db;
 }
 .report-title {
   margin: 0;
@@ -427,6 +504,44 @@ function jumpToEvidence() {
 .jump-btn:hover {
   background: #dbeafe;
 }
+
+/* Inline evidence block (evidence mode) */
+.inline-evidence-block {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+}
+.inline-ref-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.inline-ref-row:last-child { margin-bottom: 0; }
+.inline-ref-label {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+.inline-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  word-break: break-all;
+}
+.inline-badge:hover { opacity: 0.7; }
+.inline-badge.evidence-badge { background: #dbeafe; color: #1e40af; }
+.inline-badge.claim-badge { background: #ffedd5; color: #c2410c; }
 
 /* Empty */
 .empty-state {
