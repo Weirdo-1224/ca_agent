@@ -9,7 +9,10 @@ import org.example.ca_agent.enums.ReviewIssueType;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -49,12 +52,89 @@ public class RepairRouter {
         instruction.setRepairType(toRepairType(firstIssue.getType()));
         instruction.setTargetProduct(firstIssue.getTargetProduct());
         instruction.setTargetDimension(firstIssue.getTargetDimension());
+        instruction.setIteration(state.getIterationCount() != null ? state.getIterationCount() + 1 : 1);
         instruction.setInstruction(selectedIssues.stream()
                 .map(ReviewResultDTO.ReviewIssue::getRepairInstruction)
                 .toList()
                 .toString());
         instruction.setPriority(hasHighSeverity(selectedIssues) ? "high" : "medium");
+
+        // 增强字段：problemType、expectedFix、relatedEvidenceIds、relatedClaimIds
+        instruction.setProblemType(firstIssue.getType() != null ? firstIssue.getType().name() : null);
+        instruction.setExpectedFix(buildExpectedFix(firstIssue));
+        instruction.setRelatedEvidenceIds(collectRelatedEvidenceIds(selectedIssues, state));
+        instruction.setRelatedClaimIds(collectRelatedClaimIds(selectedIssues, state));
+
         return instruction;
+    }
+
+    /**
+     * 根据问题类型生成期望修复动作的自然语言描述。
+     */
+    private String buildExpectedFix(ReviewResultDTO.ReviewIssue issue) {
+        if (issue.getType() == null) {
+            return "根据审核意见修复相关问题";
+        }
+        return switch (issue.getType()) {
+            case MISSING_EVIDENCE -> "补充缺失的证据来源，增加可信网页采集";
+            case UNKNOWN_FIELD_TOO_MANY -> "补充目标产品的关键信息字段";
+            case EVIDENCE_NOT_LINKED -> "修正证据引用关系，确保结论与证据关联";
+            case SCHEMA_MISSING_FIELD -> "完善产品画像中缺失的结构化字段";
+            case COMPARISON_INCOMPLETE -> "补充对比分析矩阵，覆盖所有产品维度";
+            case VAGUE_FINDING -> "重写分析结论，提供更具体、可量化的洞察";
+            case REPORT_MISSING_SECTION -> "补充报告中缺失的章节内容";
+            case CITATION_FORMAT_ERROR -> "修正报告中的引用格式，确保来源标注规范";
+            case HALLUCINATION_RISK -> "删除或验证疑似幻觉内容，确保基于真实证据";
+        };
+    }
+
+    /**
+     * 从当前证据池中收集与问题相关的 evidenceId（按产品匹配）。
+     * 容错处理：如果无法匹配，返回空列表。
+     */
+    private List<String> collectRelatedEvidenceIds(List<ReviewResultDTO.ReviewIssue> issues,
+                                                   CompetitiveAnalysisState state) {
+        try {
+            Set<String> targetProducts = issues.stream()
+                    .map(ReviewResultDTO.ReviewIssue::getTargetProduct)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            if (targetProducts.isEmpty() || state.getRawSourceSet() == null
+                    || state.getRawSourceSet().getEvidencePool() == null) {
+                return List.of();
+            }
+            return state.getRawSourceSet().getEvidencePool().stream()
+                    .filter(e -> targetProducts.contains(e.getProductName()))
+                    .map(org.example.ca_agent.schema.Evidence::getEvidenceId)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    /**
+     * 从当前产品画像中收集与问题相关的 claimId（按产品匹配）。
+     * 容错处理：如果无法匹配，返回空列表。
+     */
+    private List<String> collectRelatedClaimIds(List<ReviewResultDTO.ReviewIssue> issues,
+                                                CompetitiveAnalysisState state) {
+        try {
+            Set<String> targetProducts = issues.stream()
+                    .map(ReviewResultDTO.ReviewIssue::getTargetProduct)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            if (targetProducts.isEmpty() || state.getProductProfileSet() == null
+                    || state.getProductProfileSet().getProducts() == null) {
+                return List.of();
+            }
+            return state.getProductProfileSet().getProducts().stream()
+                    .filter(p -> targetProducts.contains(p.getProductName()))
+                    .flatMap(p -> p.getClaims() != null ? p.getClaims().stream() : java.util.stream.Stream.empty())
+                    .map(org.example.ca_agent.schema.Claim::getClaimId)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 
     private List<ReviewResultDTO.ReviewIssue> selectIssues(List<ReviewResultDTO.ReviewIssue> issues) {

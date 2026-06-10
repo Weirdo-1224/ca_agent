@@ -5,11 +5,13 @@ import org.example.ca_agent.common.Result;
 import org.example.ca_agent.dto.agent.ReviewResultDTO;
 import org.example.ca_agent.dto.request.TaskCreateRequest;
 import org.example.ca_agent.dto.response.ReportResponse;
+import org.example.ca_agent.dto.response.RepairDiffResponse;
 import org.example.ca_agent.dto.response.TaskDetailResponse;
 import org.example.ca_agent.schema.Evidence;
 import org.example.ca_agent.dto.response.AgentRunResponse;
 import org.example.ca_agent.service.AgentRunService;
 import org.example.ca_agent.service.EvidenceService;
+import org.example.ca_agent.service.RepairDiffService;
 import org.example.ca_agent.service.ReportService;
 import org.example.ca_agent.service.TaskService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +32,7 @@ public class AnalysisTaskController {
     private final ReportService reportService;
     private final EvidenceService evidenceService;
     private final AgentRunService agentRunService;
+    private final RepairDiffService repairDiffService;
 
     @PostMapping
     public Result<TaskDetailResponse> createTask(@RequestBody TaskCreateRequest request) {
@@ -59,5 +62,17 @@ public class AnalysisTaskController {
     @GetMapping("/{taskId}/agent-runs")
     public Result<List<AgentRunResponse>> getAgentRuns(@PathVariable String taskId) {
         return Result.success(agentRunService.getAgentRuns(taskId));
+    }
+
+    /**
+     * 获取某个任务的所有修复 Diff 记录，按 iteration 升序排列。
+     * 如果没有修复记录，返回空数组。
+     */
+    @GetMapping("/{taskId}/repair-diffs")
+    public Result<RepairDiffResponse> getRepairDiffs(@PathVariable String taskId) {
+        RepairDiffResponse response = new RepairDiffResponse();
+        response.setTaskId(taskId);
+        response.setRepairDiffs(repairDiffService.getRepairDiffs(taskId));
+        return Result.success(response);
     }
 }

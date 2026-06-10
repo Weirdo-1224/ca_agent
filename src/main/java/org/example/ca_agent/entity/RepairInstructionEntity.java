@@ -22,7 +22,13 @@ public class RepairInstructionEntity {
     private String issueIdsJson;
     private String repairType;
     private String targetProduct;
+    private String targetSection;
     private String targetDimension;
+    private String problemType;
+    private String expectedFix;
+    private String relatedEvidenceIdsJson;
+    private String relatedClaimIdsJson;
+    private Integer iteration;
     private String instruction;
     private String priority;
     private LocalDateTime createdAt;

@@ -5,6 +5,7 @@ import org.example.ca_agent.dto.agent.AgentRunTrace;
 import org.example.ca_agent.dto.agent.CompetitiveAnalysisDTO;
 import org.example.ca_agent.dto.agent.ProductProfileSetDTO;
 import org.example.ca_agent.dto.agent.RawSourceSetDTO;
+import org.example.ca_agent.dto.agent.RepairDiffDTO;
 import org.example.ca_agent.dto.agent.RepairInstructionDTO;
 import org.example.ca_agent.dto.agent.ReportDraftDTO;
 import org.example.ca_agent.dto.agent.ReviewResultDTO;
@@ -26,9 +27,17 @@ public class CompetitiveAnalysisState {
     private ReportDraftDTO reportDraft;
     private ReviewResultDTO reviewResult;
     private List<RepairInstructionDTO> repairInstructions;
+    private List<RepairDiffDTO> repairDiffs;
     private List<AgentRunTrace> agentRuns;
     private Integer iterationCount;
     private TaskStatus status;
+
+    public List<RepairDiffDTO> getRepairDiffs() {
+        if (this.repairDiffs == null) {
+            this.repairDiffs = new ArrayList<>();
+        }
+        return this.repairDiffs;
+    }
 
     public List<AgentRunTrace> getAgentRuns() {
         if (this.agentRuns == null) {

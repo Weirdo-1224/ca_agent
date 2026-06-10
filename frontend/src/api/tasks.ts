@@ -6,6 +6,7 @@ import type {
   Evidence,
   ReviewResult,
   AgentRunResponse,
+  RepairDiffResponse,
 } from '@/types';
 
 export function createTask(req: TaskCreateRequest): Promise<TaskDetailResponse> {
@@ -30,4 +31,8 @@ export function getReview(taskId: string): Promise<ReviewResult> {
 
 export function getAgentRuns(taskId: string): Promise<AgentRunResponse[]> {
   return get(`/api/tasks/${taskId}/agent-runs`);
+}
+
+export function getRepairDiffs(taskId: string): Promise<RepairDiffResponse> {
+  return get(`/api/tasks/${taskId}/repair-diffs`);
 }

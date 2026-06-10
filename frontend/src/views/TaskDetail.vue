@@ -41,6 +41,14 @@
               <el-tab-pane label="质检" name="review">
                 <ReviewTab :review="review" :task-status="task.status" />
               </el-tab-pane>
+              <el-tab-pane label="修复记录" name="repairDiff">
+                <RepairDiffTab
+                  :repair-diffs="repairDiffs"
+                  :task-status="task.status"
+                  @search-evidence="searchEvidence"
+                  @go-to-section="goToSection"
+                />
+              </el-tab-pane>
               <el-tab-pane label="Agent 轨迹" name="runs">
                 <AgentRunsTab :agent-runs="agentRuns" />
               </el-tab-pane>
@@ -55,9 +63,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getTaskDetail, getReport, getEvidence, getReview, getAgentRuns } from '@/api/tasks';
+import { getTaskDetail, getReport, getEvidence, getReview, getAgentRuns, getRepairDiffs } from '@/api/tasks';
 import { isTerminalStatus, isRunningStatus } from '@/utils/status';
-import type { TaskDetailResponse, ReportResponse, Evidence, ReviewResult, AgentRunResponse } from '@/types';
+import type { TaskDetailResponse, ReportResponse, Evidence, ReviewResult, AgentRunResponse, RepairDiff } from '@/types';
 
 import TaskStatusHeader from '@/components/TaskStatusHeader.vue';
 import AgentWorkflowPanel from '@/components/AgentWorkflowPanel.vue';
@@ -65,6 +73,7 @@ import OverviewTab from '@/components/OverviewTab.vue';
 import ReportTab from '@/components/ReportTab.vue';
 import EvidenceTab from '@/components/EvidenceTab.vue';
 import ReviewTab from '@/components/ReviewTab.vue';
+import RepairDiffTab from '@/components/RepairDiffTab.vue';
 import AgentRunsTab from '@/components/AgentRunsTab.vue';
 
 const route = useRoute();
@@ -81,6 +90,7 @@ const agentRuns = ref<AgentRunResponse[]>([]);
 const report = ref<ReportResponse | null>(null);
 const evidence = ref<Evidence[]>([]);
 const review = ref<ReviewResult | null>(null);
+const repairDiffs = ref<RepairDiff[]>([]);
 
 const evidenceTabRef = ref<InstanceType<typeof EvidenceTab> | null>(null);
 
@@ -123,9 +133,16 @@ async function loadReview() {
   } catch { /* silent */ }
 }
 
+async function loadRepairDiffs() {
+  try {
+    const resp = await getRepairDiffs(taskId);
+    repairDiffs.value = resp.repairDiffs ?? [];
+  } catch { /* silent */ }
+}
+
 async function refreshAll() {
   refreshing.value = true;
-  await Promise.all([loadTask(), loadAgentRuns(), loadReport(), loadEvidence(), loadReview()]);
+  await Promise.all([loadTask(), loadAgentRuns(), loadReport(), loadEvidence(), loadReview(), loadRepairDiffs()]);
   refreshing.value = false;
 }
 
@@ -134,7 +151,7 @@ async function initialLoad() {
   pageError.value = '';
   await loadTask();
   if (!pageError.value) {
-    await Promise.all([loadAgentRuns(), loadReport(), loadEvidence(), loadReview()]);
+    await Promise.all([loadAgentRuns(), loadReport(), loadEvidence(), loadReview(), loadRepairDiffs()]);
   }
   pageLoading.value = false;
 }
@@ -174,6 +191,11 @@ function searchEvidence(evidenceId: string) {
   setTimeout(() => {
     evidenceTabRef.value?.setSearchKeyword(evidenceId);
   }, 100);
+}
+
+function goToSection(sectionTitle: string) {
+  // TODO: 实现报告页章节定位能力（当前先切换到报告 tab）
+  activeTab.value = 'report';
 }
 
 onMounted(async () => {

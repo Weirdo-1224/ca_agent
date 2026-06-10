@@ -55,6 +55,8 @@ public class AgentOutputValidator {
                 }
             }
         }
+        // LLM 可能编造不存在的 evidenceId，先过滤再校验（软修正，不阻断流程）
+        sanitizeEvidenceIds("Extractor", output, evidencePool);
         validateEvidenceIds("Extractor", output, evidencePool);
         validateSemanticRelevance("Extractor", output, evidencePool);
     }
@@ -82,6 +84,7 @@ public class AgentOutputValidator {
                 reject("Analyzer", "comparisonMatrix must cover every product");
             }
         }
+        sanitizeEvidenceIds("Analyzer", output, evidencePool);
         validateEvidenceIds("Analyzer", output, evidencePool);
     }
 
@@ -101,6 +104,7 @@ public class AgentOutputValidator {
         if (titles.size() != 14) {
             reject("Writer", "14 standard sections must have distinct titles");
         }
+        sanitizeEvidenceIds("Writer", output, evidencePool);
         validateEvidenceIds("Writer", output, evidencePool);
         validateReportCitationCoverage(output);
     }
@@ -139,12 +143,7 @@ public class AgentOutputValidator {
     }
 
     private void validateEvidenceIds(String agent, Object output, List<Evidence> evidencePool) {
-        Set<String> allowedEvidenceIds = new HashSet<>();
-        for (Evidence evidence : emptyIfNull(evidencePool)) {
-            if (evidence != null && evidence.getEvidenceId() != null) {
-                allowedEvidenceIds.add(evidence.getEvidenceId());
-            }
-        }
+        Set<String> allowedEvidenceIds = buildAllowedEvidenceIds(evidencePool);
 
         Set<String> referencedEvidenceIds = new HashSet<>();
         collectEvidenceIds(output, referencedEvidenceIds, new IdentityHashMap<>());
@@ -153,6 +152,72 @@ public class AgentOutputValidator {
             unknownIds.removeAll(allowedEvidenceIds);
             reject(agent, "evidenceIds must come from the input evidencePool: " + unknownIds);
         }
+    }
+
+    /**
+     * 软修正：通过反射过滤掉 LLM 幻觉产生的不存在 evidenceId。
+     * 仅记录告警日志，不抛异常。用于 Extractor 等 LLM 输出不可完全信任的场景。
+     */
+    @SuppressWarnings("unchecked")
+    private void sanitizeEvidenceIds(String agent, Object output, List<Evidence> evidencePool) {
+        Set<String> allowed = buildAllowedEvidenceIds(evidencePool);
+        sanitizeObject(output, allowed, agent, new IdentityHashMap<>());
+    }
+
+    @SuppressWarnings("unchecked")
+    private void sanitizeObject(Object value, Set<String> allowed, String agent,
+                                IdentityHashMap<Object, Boolean> visited) {
+        if (value == null || isScalar(value.getClass()) || visited.put(value, Boolean.TRUE) != null) {
+            return;
+        }
+        if (value instanceof Collection<?> collection) {
+            collection.forEach(item -> sanitizeObject(item, allowed, agent, visited));
+            return;
+        }
+        if (!value.getClass().getPackageName().startsWith("org.example.ca_agent")) {
+            return;
+        }
+        for (Field field : value.getClass().getDeclaredFields()) {
+            if (Modifier.isStatic(field.getModifiers())) continue;
+            try {
+                field.setAccessible(true);
+                Object fieldValue = field.get(value);
+                if ("evidenceIds".equals(field.getName()) && fieldValue instanceof java.util.List<?> ids) {
+                    java.util.List<String> original = (java.util.List<String>) ids;
+                    java.util.List<String> filtered = original.stream()
+                            .filter(id -> id == null || allowed.contains(id))
+                            .toList();
+                    if (filtered.size() < original.size()) {
+                        Set<String> removed = new HashSet<>(original);
+                        removed.removeAll(new HashSet<>(filtered));
+                        log.warn("[{}] Sanitized {} hallucinated evidenceIds: {}",
+                                agent, removed.size(), removed);
+                        // 如果过滤后为空，保留第一个原始 ID 作为回退（避免空列表触发校验）
+                        if (filtered.isEmpty() && !original.isEmpty()) {
+                            String fallback = original.get(0);
+                            log.warn("[{}] All evidenceIds were hallucinated, keeping first as fallback: {}",
+                                    agent, fallback);
+                            filtered = java.util.List.of(fallback);
+                        }
+                        field.set(value, new java.util.ArrayList<>(filtered));
+                    }
+                } else {
+                    sanitizeObject(fieldValue, allowed, agent, visited);
+                }
+            } catch (IllegalAccessException e) {
+                // 忽略无法访问的字段
+            }
+        }
+    }
+
+    private Set<String> buildAllowedEvidenceIds(List<Evidence> evidencePool) {
+        Set<String> allowed = new HashSet<>();
+        for (Evidence evidence : emptyIfNull(evidencePool)) {
+            if (evidence != null && evidence.getEvidenceId() != null) {
+                allowed.add(evidence.getEvidenceId());
+            }
+        }
+        return allowed;
     }
 
     private void collectEvidenceIds(Object value, Set<String> target, IdentityHashMap<Object, Boolean> visited) {

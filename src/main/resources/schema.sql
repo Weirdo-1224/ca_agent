@@ -115,10 +115,37 @@ CREATE TABLE IF NOT EXISTS repair_instruction (
     issue_ids_json   TEXT,
     repair_type      VARCHAR(32),
     target_product   VARCHAR(128),
+    target_section   VARCHAR(128),
     target_dimension VARCHAR(64),
+    problem_type     VARCHAR(64),
+    expected_fix     TEXT,
+    related_evidence_ids_json TEXT,
+    related_claim_ids_json    TEXT,
+    iteration        INTEGER,
     instruction      TEXT,
     priority         VARCHAR(16),
     created_at       TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_repair_instruction_task_id ON repair_instruction(task_id);
+
+CREATE TABLE IF NOT EXISTS repair_diff (
+    id                     BIGSERIAL PRIMARY KEY,
+    task_id                VARCHAR(64)  NOT NULL,
+    iteration              INTEGER      NOT NULL,
+    target_agent           VARCHAR(32),
+    before_score           INTEGER,
+    after_score            INTEGER,
+    before_issue_count     INTEGER,
+    after_issue_count      INTEGER,
+    fixed_issue_count      INTEGER,
+    added_evidence_ids_json TEXT,
+    added_claim_ids_json    TEXT,
+    changed_sections_json   TEXT,
+    changed_products_json   TEXT,
+    summary                TEXT,
+    created_at             TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_repair_diff_task_id ON repair_diff(task_id);
+CREATE INDEX IF NOT EXISTS idx_repair_diff_task_iteration ON repair_diff(task_id, iteration);

@@ -191,7 +191,13 @@ public class EntityAssembler {
             dto.setIssueIds(parseJsonList(e.getIssueIdsJson(), String.class));
             dto.setRepairType(parseEnum(RepairType.class, e.getRepairType()));
             dto.setTargetProduct(e.getTargetProduct());
+            dto.setTargetSection(e.getTargetSection());
             dto.setTargetDimension(e.getTargetDimension());
+            dto.setProblemType(e.getProblemType());
+            dto.setExpectedFix(e.getExpectedFix());
+            dto.setRelatedEvidenceIds(parseJsonList(e.getRelatedEvidenceIdsJson(), String.class));
+            dto.setRelatedClaimIds(parseJsonList(e.getRelatedClaimIdsJson(), String.class));
+            dto.setIteration(e.getIteration());
             dto.setInstruction(e.getInstruction());
             dto.setPriority(e.getPriority());
             return dto;

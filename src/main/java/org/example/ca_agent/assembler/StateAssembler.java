@@ -13,7 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ public class StateAssembler {
     private final ReviewIssueRepository reviewIssueRepository;
     private final RepairInstructionRepository repairInstructionRepository;
     private final AgentRunRepository agentRunRepository;
+    private final RepairDiffRepository repairDiffRepository;
 
     @Transactional
     public void saveState(CompetitiveAnalysisState state) {
@@ -54,6 +57,7 @@ public class StateAssembler {
         saveReviewIssues(state, now);
         saveRepairInstructions(state, now);
         saveAgentRuns(state, now);
+        saveRepairDiffs(state, now);
     }
 
     private void saveAnalysisTask(CompetitiveAnalysisState state, LocalDateTime now) {
@@ -194,11 +198,59 @@ public class StateAssembler {
             entity.setIssueIdsJson(JsonUtils.toJson(dto.getIssueIds()));
             entity.setRepairType(Optional.ofNullable(dto.getRepairType()).map(Enum::name).orElse(null));
             entity.setTargetProduct(dto.getTargetProduct());
+            entity.setTargetSection(dto.getTargetSection());
             entity.setTargetDimension(dto.getTargetDimension());
+            entity.setProblemType(dto.getProblemType());
+            entity.setExpectedFix(dto.getExpectedFix());
+            entity.setRelatedEvidenceIdsJson(JsonUtils.toJson(dto.getRelatedEvidenceIds()));
+            entity.setRelatedClaimIdsJson(JsonUtils.toJson(dto.getRelatedClaimIds()));
+            entity.setIteration(dto.getIteration());
             entity.setInstruction(dto.getInstruction());
             entity.setPriority(dto.getPriority());
             entity.setCreatedAt(now);
             repairInstructionRepository.insert(entity);
+        }
+    }
+
+    /**
+     * 持久化 RepairDiff 记录。
+     * 采用「跳过已存在 iteration」的策略，避免每次 saveState 重复插入。
+     */
+    private void saveRepairDiffs(CompetitiveAnalysisState state, LocalDateTime now) {
+        List<RepairDiffDTO> diffs = state.getRepairDiffs();
+        if (diffs == null || diffs.isEmpty()) {
+            return;
+        }
+        String taskId = state.getTaskInput().getTaskId();
+
+        // 查询已持久化的 iteration 集合
+        Set<Integer> existingIterations = repairDiffRepository.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<RepairDiffEntity>()
+                        .eq(RepairDiffEntity::getTaskId, taskId)
+                        .select(RepairDiffEntity::getIteration)
+        ).stream().map(RepairDiffEntity::getIteration).collect(Collectors.toSet());
+
+        // 只插入新的 diff
+        for (RepairDiffDTO diff : diffs) {
+            if (diff.getIteration() != null && existingIterations.contains(diff.getIteration())) {
+                continue;
+            }
+            RepairDiffEntity entity = new RepairDiffEntity();
+            entity.setTaskId(taskId);
+            entity.setIteration(diff.getIteration());
+            entity.setTargetAgent(diff.getTargetAgent());
+            entity.setBeforeScore(diff.getBeforeScore());
+            entity.setAfterScore(diff.getAfterScore());
+            entity.setBeforeIssueCount(diff.getBeforeIssueCount());
+            entity.setAfterIssueCount(diff.getAfterIssueCount());
+            entity.setFixedIssueCount(diff.getFixedIssueCount());
+            entity.setAddedEvidenceIdsJson(JsonUtils.toJson(diff.getAddedEvidenceIds()));
+            entity.setAddedClaimIdsJson(JsonUtils.toJson(diff.getAddedClaimIds()));
+            entity.setChangedSectionsJson(JsonUtils.toJson(diff.getChangedSectionTitles()));
+            entity.setChangedProductsJson(JsonUtils.toJson(diff.getChangedProducts()));
+            entity.setSummary(diff.getSummary());
+            entity.setCreatedAt(now);
+            repairDiffRepository.insert(entity);
         }
     }
 

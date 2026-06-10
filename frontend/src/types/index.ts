@@ -113,3 +113,25 @@ export interface LlmCallRecord {
   completionTokens: number;
   durationMs: number;
 }
+
+export interface RepairDiff {
+  taskId: string;
+  iteration: number;
+  targetAgent: string;
+  beforeScore: number | null;
+  afterScore: number | null;
+  beforeIssueCount: number | null;
+  afterIssueCount: number | null;
+  fixedIssueCount: number | null;
+  addedEvidenceIds: string[];
+  addedClaimIds: string[];
+  changedSectionTitles: string[];
+  changedProducts: string[];
+  summary: string;
+  createdAt: string;
+}
+
+export interface RepairDiffResponse {
+  taskId: string;
+  repairDiffs: RepairDiff[];
+}
