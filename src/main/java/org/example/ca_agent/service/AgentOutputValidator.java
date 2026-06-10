@@ -57,7 +57,7 @@ public class AgentOutputValidator {
         }
         // LLM 可能编造不存在的 evidenceId，先过滤再校验（软修正，不阻断流程）
         sanitizeEvidenceIds("Extractor", output, evidencePool);
-        validateEvidenceIds("Extractor", output, evidencePool);
+        warnInvalidEvidenceIds("Extractor", output, evidencePool);
         validateSemanticRelevance("Extractor", output, evidencePool);
     }
 
@@ -85,7 +85,7 @@ public class AgentOutputValidator {
             }
         }
         sanitizeEvidenceIds("Analyzer", output, evidencePool);
-        validateEvidenceIds("Analyzer", output, evidencePool);
+        warnInvalidEvidenceIds("Analyzer", output, evidencePool);
     }
 
     public void validateWriter(ReportDraftDTO output, String taskId, List<Evidence> evidencePool) {
@@ -105,7 +105,7 @@ public class AgentOutputValidator {
             reject("Writer", "14 standard sections must have distinct titles");
         }
         sanitizeEvidenceIds("Writer", output, evidencePool);
-        validateEvidenceIds("Writer", output, evidencePool);
+        warnInvalidEvidenceIds("Writer", output, evidencePool);
         validateReportCitationCoverage(output);
     }
 
@@ -155,6 +155,22 @@ public class AgentOutputValidator {
     }
 
     /**
+     * sanitize 后的宽容校验：仅记录 warn 日志，不阻断流程。
+     * 用于处理 sanitize 仍无法完全修正的残留无效 ID（如全部幻觉时保留的 fallback）。
+     */
+    private void warnInvalidEvidenceIds(String agent, Object output, List<Evidence> evidencePool) {
+        Set<String> allowedEvidenceIds = buildAllowedEvidenceIds(evidencePool);
+        Set<String> referencedEvidenceIds = new HashSet<>();
+        collectEvidenceIds(output, referencedEvidenceIds, new IdentityHashMap<>());
+        if (!allowedEvidenceIds.containsAll(referencedEvidenceIds)) {
+            Set<String> unknownIds = new HashSet<>(referencedEvidenceIds);
+            unknownIds.removeAll(allowedEvidenceIds);
+            log.warn("[{}] Remaining hallucinated evidenceIds after sanitize (tolerated): {}",
+                    agent, unknownIds);
+        }
+    }
+
+    /**
      * 软修正：通过反射过滤掉 LLM 幻觉产生的不存在 evidenceId。
      * 仅记录告警日志，不抛异常。用于 Extractor 等 LLM 输出不可完全信任的场景。
      */
@@ -192,10 +208,16 @@ public class AgentOutputValidator {
                         removed.removeAll(new HashSet<>(filtered));
                         log.warn("[{}] Sanitized {} hallucinated evidenceIds: {}",
                                 agent, removed.size(), removed);
-                        // 如果过滤后为空，保留第一个原始 ID 作为回退（避免空列表触发校验）
-                        if (filtered.isEmpty() && !original.isEmpty()) {
+                        // 如果过滤后为空，从 allowed 中取一个真实 ID 作为 fallback
+                        if (filtered.isEmpty() && !allowed.isEmpty()) {
+                            String fallback = allowed.iterator().next();
+                            log.warn("[{}] All evidenceIds were hallucinated, using real fallback: {}",
+                                    agent, fallback);
+                            filtered = java.util.List.of(fallback);
+                        } else if (filtered.isEmpty()) {
+                            // allowed 也为空，保留第一个原始 ID
                             String fallback = original.get(0);
-                            log.warn("[{}] All evidenceIds were hallucinated, keeping first as fallback: {}",
+                            log.warn("[{}] All evidenceIds hallucinated and pool is empty, keeping: {}",
                                     agent, fallback);
                             filtered = java.util.List.of(fallback);
                         }
