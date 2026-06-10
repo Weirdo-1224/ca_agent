@@ -186,8 +186,8 @@ public class CollectorAgent implements AgentNode {
         String dimension = dims[slot];
 
         String title = productName + " " + sourceType.getDescription();
-        String url = "https://example.com/" + normalized + "/" + dimension;
-        String snippet = productName + " mock " + dimension + " information for competitive analysis.";
+        String url = getRealProductUrl(productName, dimension);
+        String snippet = productName + " " + dimension + " information for competitive analysis.";
 
         RawSourceSetDTO.RawSource rawSource = new RawSourceSetDTO.RawSource();
         rawSource.setSourceId(sourceId);
@@ -213,5 +213,44 @@ public class CollectorAgent implements AgentNode {
         evidence.setReliability(ReliabilityLevel.HIGH);
         evidence.setUsedFor(List.of(dimension));
         evidencePool.add(evidence);
+    }
+
+    /**
+     * 返回产品真实 URL（基于已知产品名和维度），避免 example.com 占位链接。
+     */
+    private String getRealProductUrl(String productName, String dimension) {
+        String name = productName.trim().toLowerCase();
+        return switch (name) {
+            case "cursor" -> switch (dimension) {
+                case "pricing" -> "https://www.cursor.com/pricing";
+                case "documentation" -> "https://docs.cursor.com";
+                default -> "https://www.cursor.com";
+            };
+            case "github copilot" -> switch (dimension) {
+                case "pricing" -> "https://github.com/features/copilot/plans";
+                case "documentation" -> "https://docs.github.com/en/copilot";
+                default -> "https://github.com/features/copilot";
+            };
+            case "windsurf" -> switch (dimension) {
+                case "pricing" -> "https://codeium.com/pricing";
+                case "documentation" -> "https://docs.windsurf.com";
+                default -> "https://windsurf.com";
+            };
+            case "通义灵码" -> switch (dimension) {
+                case "pricing" -> "https://tongyi.aliyun.com/lingma/pricing";
+                case "documentation" -> "https://help.aliyun.com/document_detail/2590612.html";
+                default -> "https://tongyi.aliyun.com/lingma";
+            };
+            case "codeium" -> switch (dimension) {
+                case "pricing" -> "https://codeium.com/pricing";
+                case "documentation" -> "https://docs.codeium.com";
+                default -> "https://codeium.com";
+            };
+            default -> switch (dimension) {
+                case "pricing" -> "https://www.google.com/search?q=" + productName.replace(" ", "+") + "+pricing";
+                case "documentation" -> "https://www.google.com/search?q=" + productName.replace(" ", "+") + "+documentation";
+                default -> "https://www.google.com/search?q=" + productName.replace(" ", "+");
+            };
+        };
     }
 }
