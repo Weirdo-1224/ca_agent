@@ -54,8 +54,8 @@
               </div>
             </div>
 
-            <!-- 正文 -->
-            <pre class="section-text">{{ s.content }}</pre>
+            <!-- 正文（Markdown 渲染） -->
+            <div class="section-text markdown-body" v-html="renderMarkdown(s.content)"></div>
 
             <!-- 简洁模式：底部轻量证据摘要栏 -->
             <div v-if="readingMode === 'clean' && (s.evidenceIds?.length || s.relatedClaimIds?.length)" class="evidence-summary-bar" @click="openDrawer(s)">
@@ -165,8 +165,15 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { ElMessage } from 'element-plus';
+import { marked } from 'marked';
 import type { ReportResponse, ReportSection } from '@/types';
 import { isRunningStatus } from '@/utils/status';
+
+// 配置 marked
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+});
 
 const props = defineProps<{
   report: ReportResponse | null;
@@ -178,6 +185,12 @@ const emit = defineEmits<{
 }>();
 
 const readingMode = ref<'clean' | 'evidence'>('clean');
+
+/** 将 Markdown 内容渲染为 HTML */
+function renderMarkdown(content: string | undefined | null): string {
+  if (!content) return '';
+  return marked.parse(content) as string;
+}
 const activeIndex = ref(0);
 const sectionRefs: Record<number, HTMLElement | null> = {};
 
@@ -385,13 +398,107 @@ function jumpToEvidence() {
 .top-tag.tag-claim { background: #ffedd5; color: #c2410c; }
 
 .section-text {
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: inherit;
   font-size: 14px;
   line-height: 1.75;
   color: #374151;
   margin: 0;
+}
+
+/* Markdown 渲染样式 */
+.markdown-body :deep(h1) {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin: 16px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.markdown-body :deep(h2) {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 14px 0 6px;
+}
+.markdown-body :deep(h3) {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  margin: 12px 0 4px;
+}
+.markdown-body :deep(h4),
+.markdown-body :deep(h5),
+.markdown-body :deep(h6) {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+  margin: 10px 0 4px;
+}
+.markdown-body :deep(p) {
+  margin: 6px 0;
+}
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  margin: 6px 0;
+  padding-left: 24px;
+}
+.markdown-body :deep(li) {
+  margin: 3px 0;
+}
+.markdown-body :deep(strong) {
+  font-weight: 600;
+  color: #111827;
+}
+.markdown-body :deep(em) {
+  font-style: italic;
+  color: #6b7280;
+}
+.markdown-body :deep(code) {
+  background: #f3f4f6;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: #d6336c;
+}
+.markdown-body :deep(pre) {
+  background: #f8f9fa;
+  padding: 12px 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 8px 0;
+  border: 1px solid #e5e7eb;
+}
+.markdown-body :deep(pre code) {
+  background: none;
+  padding: 0;
+  color: #374151;
+}
+.markdown-body :deep(blockquote) {
+  border-left: 3px solid #d1d5db;
+  padding-left: 12px;
+  margin: 8px 0;
+  color: #6b7280;
+}
+.markdown-body :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.markdown-body :deep(th),
+.markdown-body :deep(td) {
+  border: 1px solid #e5e7eb;
+  padding: 6px 10px;
+  text-align: left;
+}
+.markdown-body :deep(th) {
+  background: #f9fafb;
+  font-weight: 600;
+}
+.markdown-body :deep(hr) {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 12px 0;
 }
 
 /* Evidence summary bar */
