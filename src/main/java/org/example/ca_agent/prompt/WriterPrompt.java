@@ -43,6 +43,15 @@ public class WriterPrompt {
                 Do not generate sourceList content; set sourceList to an empty JSON array because the application supplies it.
                 sections must contain all 14 standard titles:
                 %s
+
+                IMPORTANT - Markdown table requirements:
+                1. The section "竞品概览" (or "competitor overview") MUST start with a comprehensive Markdown comparison table summarizing all target products.
+                   The table should include columns: 产品名称 | 产品定位 | 核心优势 | 主要劣势 | 定价模式 | 目标用户
+                   Each row represents one product, with concise but informative cell content.
+                2. The sections "核心功能矩阵", "Agent 编程能力对比", "定价模式对比" should also use Markdown tables where appropriate to make comparisons more visual.
+                3. Use standard Markdown table syntax: | header | header | with --- separator row.
+                4. After each table, continue with detailed analysis text.
+
                 %s
                 """.formatted(
                 productProfileSetJson,
