@@ -205,12 +205,12 @@ function getAgentTagType(agent: string): string {
 
 function formatAgentName(agent: string): string {
   const map: Record<string, string> = {
-    PLANNER_AGENT: 'Planner',
-    COLLECTOR_AGENT: 'Collector',
-    EXTRACTOR_AGENT: 'Extractor',
-    ANALYZER_AGENT: 'Analyzer',
-    WRITER_AGENT: 'Writer',
-    REVIEWER_AGENT: 'Reviewer',
+    PLANNER_AGENT: '规划分析',
+    COLLECTOR_AGENT: '信息采集',
+    EXTRACTOR_AGENT: '特征提取',
+    ANALYZER_AGENT: '对比分析',
+    WRITER_AGENT: '报告生成',
+    REVIEWER_AGENT: '质量校验',
   };
   return map[agent] ?? agent;
 }

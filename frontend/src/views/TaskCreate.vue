@@ -5,22 +5,21 @@
       <aside class="left-col">
         <!-- Hero 卡片 -->
         <div class="panel hero-panel">
-          <h1 class="hero-title">CA Agent</h1>
-          <p class="hero-subtitle">多 Agent 竞品分析工作台</p>
+          <h1 class="hero-title">Compass</h1>
+          <p class="hero-subtitle">智能竞品分析平台</p>
           <p class="hero-desc">
-            通过 Planner、Collector、Extractor、Analyzer、Writer、Reviewer
-            六个专职 Agent，完成公开信息采集、结构化抽取、竞品分析、报告生成与质检回退。
+            通过多角色智能协同，自动完成公开信息采集、结构化抽取、竞品分析、报告生成与质量校验，输出专业竞品分析报告。
           </p>
           <div class="hero-tags">
-            <span class="tag">多 Agent 协作</span>
-            <span class="tag">证据链追溯</span>
-            <span class="tag">质检回退闭环</span>
+            <span class="tag">多角色协同分析</span>
+            <span class="tag">全链路证据溯源</span>
+            <span class="tag">质量闭环管理</span>
           </div>
         </div>
 
-        <!-- Agent 工作流卡片 -->
+        <!-- 分析流程卡片 -->
         <div class="panel workflow-panel">
-          <h3 class="panel-title">Agent 工作流</h3>
+          <h3 class="panel-title">分析流程</h3>
           <ul class="agent-list">
             <li v-for="(agent, idx) in agents" :key="idx" class="agent-item">
               <span class="agent-step">{{ idx + 1 }}</span>
@@ -71,7 +70,7 @@
           <div class="form-header">
             <h2 class="form-title">创建竞品分析任务</h2>
             <p class="form-subtitle">
-              配置一次多 Agent 竞品分析流程，创建后将进入任务详情页查看执行轨迹和报告。
+              配置一次智能竞品分析流程，创建后将进入任务详情页查看执行轨迹和报告。
             </p>
           </div>
 
@@ -141,7 +140,7 @@
 
             <!-- 按钮 -->
             <div class="form-actions">
-              <el-button size="large" @click="fillDemo">一键填充 Demo</el-button>
+              <el-button size="large" @click="fillDemo">快速填充示例</el-button>
               <el-button type="primary" size="large" :loading="loading" @click="onSubmit" class="submit-btn">
                 {{ loading ? '分析中...' : '创建任务并启动分析' }}
               </el-button>
@@ -149,7 +148,7 @@
 
             <!-- loading 提示 -->
             <p v-if="loading" class="loading-hint">
-              CA Agent 正在执行多 Agent 分析流程，真实模型模式下可能需要几十秒，请勿重复提交。
+              系统正在执行智能分析流程，真实模型模式下可能需要几十秒，请勿重复提交。
             </p>
           </el-form>
         </div>
@@ -174,12 +173,12 @@ const errorMsg = ref('');
 const manualTaskId = ref('');
 
 const agents = [
-  { name: 'PlannerAgent', desc: '生成采集任务计划' },
-  { name: 'CollectorAgent', desc: '搜索公开资料并生成证据池' },
-  { name: 'ExtractorAgent', desc: '结构化抽取产品画像和 Claim' },
-  { name: 'AnalyzerAgent', desc: '横向对比分析与 SWOT' },
-  { name: 'WriterAgent', desc: '生成 Markdown 竞品分析报告' },
-  { name: 'ReviewerAgent', desc: '质检评分并判断是否回退' },
+  { name: '规划分析', desc: '制定采集计划与分析框架' },
+  { name: '信息采集', desc: '搜索公开资料并构建证据池' },
+  { name: '特征提取', desc: '结构化抽取产品画像与关键特征' },
+  { name: '对比分析', desc: '多维度横向对比与 SWOT 分析' },
+  { name: '报告生成', desc: '输出专业 Markdown 竞品分析报告' },
+  { name: '质量校验', desc: '智能评分与质量闭环校验' },
 ];
 
 const form = reactive<TaskCreateRequest>({
@@ -230,7 +229,7 @@ function fillDemo() {
   form.outputFormat = 'markdown';
   form.language = 'zh-CN';
   form.maxIterations = 1;
-  ElMessage.success('已填充 Demo 参数');
+  ElMessage.success('已填充示例参数');
 }
 
 async function onSubmit() {

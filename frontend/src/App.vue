@@ -8,11 +8,10 @@ const router = useRouter();
     <header class="app-header">
       <div class="header-inner">
         <div class="header-left" @click="router.push('/')" style="cursor: pointer">
-          <span class="logo">CA Agent</span>
-          <span class="slogan">多 Agent 竞品分析工作台</span>
+          <span class="logo">Compass</span>
+          <span class="slogan">智能竞品分析平台</span>
         </div>
         <div class="header-right">
-          <span class="env-badge">Local Demo</span>
         </div>
       </div>
     </header>
@@ -80,16 +79,7 @@ body {
   display: flex;
   align-items: center;
 }
-.env-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-}
+
 .app-main {
   flex: 1;
 }

@@ -2,7 +2,7 @@
   <div class="workflow-panel">
     <div class="panel-header">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      <span>Agent 工作流</span>
+      <span>分析流程</span>
     </div>
     <div class="agent-list">
       <div
@@ -53,12 +53,12 @@ interface AgentInfo {
 }
 
 const AGENT_DEFS = [
-  { type: 'PLANNER_AGENT', label: 'Planner', description: '生成采集任务计划' },
-  { type: 'COLLECTOR_AGENT', label: 'Collector', description: '搜索公开资料并生成证据池' },
-  { type: 'EXTRACTOR_AGENT', label: 'Extractor', description: '结构化抽取产品画像和 Claim' },
-  { type: 'ANALYZER_AGENT', label: 'Analyzer', description: '横向对比分析与 SWOT' },
-  { type: 'WRITER_AGENT', label: 'Writer', description: '生成 Markdown 竞品分析报告' },
-  { type: 'REVIEWER_AGENT', label: 'Reviewer', description: '质检评分并判断是否回退' },
+  { type: 'PLANNER_AGENT', matchKey: 'Planner', label: '规划分析', description: '制定采集计划与分析框架' },
+  { type: 'COLLECTOR_AGENT', matchKey: 'Collector', label: '信息采集', description: '搜索公开资料并构建证据池' },
+  { type: 'EXTRACTOR_AGENT', matchKey: 'Extractor', label: '特征提取', description: '结构化抽取产品画像与关键特征' },
+  { type: 'ANALYZER_AGENT', matchKey: 'Analyzer', label: '对比分析', description: '多维度横向对比与 SWOT 分析' },
+  { type: 'WRITER_AGENT', matchKey: 'Writer', label: '报告生成', description: '输出专业 Markdown 竞品分析报告' },
+  { type: 'REVIEWER_AGENT', matchKey: 'Reviewer', label: '质量校验', description: '智能评分与质量闭环校验' },
 ];
 
 const props = defineProps<{
@@ -77,7 +77,7 @@ const agents = computed<AgentInfo[]>(() => {
     if (lastRun) {
       state = lastRun.status === 'SUCCESS' ? 'success' : 'failed';
     }
-    if (currentAgent === def.label + 'Agent' || currentAgent === def.label) {
+    if (currentAgent === def.matchKey + 'Agent' || currentAgent === def.matchKey) {
       state = 'running';
     }
 
