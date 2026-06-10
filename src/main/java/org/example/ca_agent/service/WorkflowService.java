@@ -30,13 +30,22 @@ public class WorkflowService {
 
     @Async
     public void runAsync(TaskInputDTO taskInput) {
+        CompetitiveAnalysisState state = competitiveAnalysisGraph.createState(taskInput);
         try {
             log.info("[Async] Starting workflow for task: {}", taskInput.getTaskId());
-            CompetitiveAnalysisState state = competitiveAnalysisGraph.run(taskInput);
+            competitiveAnalysisGraph.execute(state);
             stateAssembler.saveState(state);
             log.info("[Async] Workflow completed for task: {}, status: {}", taskInput.getTaskId(), state.getStatus());
         } catch (Exception e) {
             log.error("[Async] Workflow failed for task: {}", taskInput.getTaskId(), e);
+            // 尝试保存已有中间状态（证据、报告、质检结果等）
+            try {
+                state.setStatus(TaskStatus.FAILED);
+                stateAssembler.saveState(state);
+                log.info("[Async] Saved intermediate state for failed task: {}", taskInput.getTaskId());
+            } catch (Exception saveEx) {
+                log.warn("[Async] Failed to save intermediate state for task: {}", taskInput.getTaskId(), saveEx);
+            }
             markTaskFailed(taskInput.getTaskId(), e);
         }
     }

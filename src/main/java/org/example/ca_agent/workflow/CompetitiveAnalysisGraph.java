@@ -43,6 +43,21 @@ public class CompetitiveAnalysisGraph {
         return routeUntilFinished(state);
     }
 
+    /**
+     * 初始化 state 但不执行，供外部在异常时能获取中间状态。
+     */
+    public CompetitiveAnalysisState createState(TaskInputDTO taskInput) {
+        return initState(taskInput);
+    }
+
+    /**
+     * 基于已初始化的 state 执行完整工作流。
+     */
+    public CompetitiveAnalysisState execute(CompetitiveAnalysisState state) {
+        executeFullChain(state);
+        return routeUntilFinished(state);
+    }
+
     public CompetitiveAnalysisState runMockDemo() {
         return run(MockCompetitiveAnalysisFixtures.mockTaskInput());
     }

@@ -129,8 +129,14 @@ async function loadEvidence() {
 
 async function loadReview() {
   try {
-    review.value = await getReview(taskId);
-  } catch { /* silent */ }
+    const result = await getReview(taskId);
+    // 如果 score 和 summary 都为 null 且 issues 为空，说明 Reviewer 尚未执行
+    if (result && (result.score != null || result.summary != null || (result.issues && result.issues.length > 0))) {
+      review.value = result;
+    } else {
+      review.value = null;
+    }
+  } catch { review.value = null; }
 }
 
 async function loadRepairDiffs() {
